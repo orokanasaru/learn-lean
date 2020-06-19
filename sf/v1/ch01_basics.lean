@@ -586,8 +586,6 @@ Proof.
   intros n. simpl. reflexivity. Qed.
 -/
 
-/- not sure how to get simp to do intro, so moved to the left -/
-/- using our notation and simp only to avoid using library zero_add -/
 theorem zero_add (n : ℕ) : 0 + n = n := by rw add
 
 /-
@@ -633,7 +631,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem plus_id (n m o : ℕ) (hnm : n = m) (hmo : m = o) :
+theorem add_id (n m o : ℕ) (hnm : n = m) (hmo : m = o) :
   n + m = m + o := by rw [hnm, hmo]
 
 /-
@@ -645,7 +643,7 @@ Proof.
   reflexivity. Qed.
 -/
 
-theorem zero_plus_mul (n m : ℕ) : (0 + n) * m = n * m :=
+theorem zero_add_mul (n m : ℕ) : (0 + n) * m = n * m :=
   by rw zero_add
 
 /-
@@ -688,7 +686,7 @@ Proof.
   - reflexivity. Qed.
 -/
 
-theorem plus_one_neq_zero (n : ℕ) : (n + 1) =? 0 = ff :=
+theorem add_one_neq_zero (n : ℕ) : (n + 1) =? 0 = ff :=
 begin
   cases n,
     refl,
@@ -841,7 +839,7 @@ Qed.
 nb. requires mathlib
 TODO: rintro doesn't have case labels
 -/
-theorem plus_one_neq_zero' : ∀n, n + 1 =? 0 = ff :=
+theorem add_one_neq_zero' : ∀n, n + 1 =? 0 = ff :=
 begin
   rintro ⟨n⟩,
     refl,

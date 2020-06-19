@@ -3,7 +3,13 @@ From LF Require Export Basics.
 -/
 
 import data.nat.basic
+import tactic.basic
 import .ch01_basics
+
+open basics (evenb)
+open nat (succ)
+
+namespace induction
 
 /-
 Theorem plus_n_O_firsttry : ∀n:nat,
@@ -14,8 +20,10 @@ Proof.
 Abort.
 -/
 
-/- yeah, this would fail in coq -/
-theorem plus_n_0 (n : ℕ) : n = n + 0 := by simp
+/- swapping order as this is refl in lean -/
+
+/- zero_add is a theorem used by simp in lean -/
+theorem zero_add_firsttry (n : ℕ) : 0 + n = n := by squeeze_simp
 
 /-
 Theorem plus_n_O_secondtry : ∀n:nat,
@@ -29,9 +37,13 @@ Proof.
 Abort.
 -/
 
-/- still obviously works -/
-theorem plus_n_0_secondtry (n : ℕ) : n = n + 0 :=
-  by cases n; simp
+/- zero_add is still a theorem in lean -/
+theorem zero_add_secondtry (n : ℕ) : 0 + n = n :=
+begin
+  cases n,
+    refl,
+  squeeze_simp,
+end
 
 /-
 Theorem plus_n_O : ∀n:nat, n = n + 0.
@@ -41,12 +53,12 @@ Proof.
   - (* n = S n' *) simpl. rewrite <- IHn'. reflexivity. Qed.
 -/
 
-/- plus_n_0 is part of core, which is why previous versions worked -/
-theorem plus_n_0' (n : ℕ) : n = n + 0 :=
+theorem zero_add (n : ℕ) : 0 + n = n :=
 begin
   induction n with n ih,
     refl,
-  rw ih
+  rw nat.add_succ,
+  rw ih,
 end
 
 /-
@@ -61,8 +73,14 @@ Proof.
     simpl. rewrite → IHn'. reflexivity. Qed.
 -/
 
-theorem minus_diag (n : ℕ) : n - n = 0 :=
-  by induction n; simp *
+theorem sub_self (n : ℕ) : n - n = 0 :=
+begin
+  induction n with n ih,
+    refl,
+  /- don't use version from library -/
+  simp only [nat.succ_sub_succ_eq_sub],
+  rw ih,
+end
 
 /-
 Theorem mult_0_r : ∀n:nat,
@@ -82,40 +100,52 @@ Theorem plus_assoc : ∀n m p : nat,
 Proof.
   (* FILL IN HERE *) Admitted.
 -/
-
-open nat
-
 /-
   n.b. lean defines mul with recursion on the right,
   which makes this too trivial
 -/
-@[simp]
-theorem mult_0_r (n : ℕ) : n * 0 = 0 := rfl
+theorem mul_zero (n : ℕ) : n * 0 = 0 := rfl
 
 /-
   defining other way to get similar challenge as expected
 -/
-@[simp]
-theorem mult_succ (n m : ℕ) : n * succ m = (n * m) + n := rfl
+theorem mul_succ (n m : ℕ) : n * succ m = (n * m) + n := rfl
 
-@[simp]
-theorem mult_n_0 (n : ℕ) : 0 * n = 0 :=
-  by induction n; simp only [*, mult_0_r, mult_succ]
+theorem zero_mul (n : ℕ) : 0 * n = 0 :=
+begin
+  induction n with n ih,
+    refl,
+  rw mul_succ,
+  rw ih,
+end
 
-theorem plus_n_Sm (n m : ℕ) : succ (n + m) = n + succ m := rfl
+theorem add_succ (n m : ℕ) : n + succ m = succ (n + m) := rfl
 
-@[simp]
-theorem plus_Sn_m (n m : ℕ) : succ n + m = succ (n + m) :=
-  by induction m; simp only [*, ←plus_n_Sm, add_zero]
+theorem succ_add (n m : ℕ) : succ n + m = succ (n + m) :=
+begin
+  induction m with m ih,
+    refl,
+  rw add_succ,
+  rw ih,
+end
 
-/- this took a depressingly long time to write -/
-theorem plus_comm (n m : ℕ) : n + m = m + n :=
-  by induction n; induction m;
-    simp only [*, plus_Sn_m, add_zero, zero_add]
+theorem add_comm (n m : ℕ) : n + m = m + n :=
+begin
+  induction n with n ih,
+    rw add_zero,
+    rw zero_add,
+  rw add_succ,
+  rw succ_add,
+  rw ih,
+end
 
-/- need to prevent add_assoc from running -/
-theorem plus_assoc (n m p : ℕ) : n + (m + p) = (n + m) + p :=
-  by induction n; simp only [*, plus_Sn_m, zero_add]
+theorem add_assoc (n m p : ℕ) : n + (m + p) = (n + m) + p :=
+begin
+  induction n with n ih,
+    rw [zero_add, zero_add],
+  rw [succ_add, succ_add, succ_add],
+  rw ih,
+end
 
 /-
 Fixpoint double (n:nat) :=
@@ -125,7 +155,6 @@ Fixpoint double (n:nat) :=
   end.
 -/
 
-@[simp]
 def double : ℕ → ℕ
 | 0 := 0
 | (n + 1) := double n + 2
@@ -140,7 +169,11 @@ lemma double_plus (n : ℕ) : double n = n + n :=
 begin
   induction n with n ih,
     refl,
-  simp [*, ←plus_n_Sm]
+  rw double,
+  rw ih,
+  rw succ_add,
+  rw [add_succ, add_succ, add_succ],
+  rw add_zero,
 end
 
 /-
@@ -150,9 +183,14 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem evenb_S (n : ℕ) : evenb (succ n) = negb (evenb n) :=
-  by induction n; simp [*, evenb]
+theorem evenb_S (n : ℕ) : evenb (succ n) = bnot (evenb n) :=
+begin
+  induction n with n ih,
+    refl,
+  rw evenb,
+  rw ih,
+  rw bnot_bnot,
+end
 
 /-
 Theorem mult_0_plus' : ∀n m : nat,
@@ -164,10 +202,10 @@ Proof.
   reflexivity. Qed.
 -/
 
-theorem mult_0_plus' (n m : ℕ) : (0 + n) * m = n * m :=
+theorem zero_add_mul' (n m : ℕ) : (0 + n) * m = n * m :=
 begin
-  have h : 0 + n = n, { simp },
-  rewrite h
+  have h : 0 + n = n, rw zero_add,
+  rewrite h,
 end
 
 /-
@@ -182,12 +220,13 @@ Proof.
 Abort.
 -/
 
-theorem plus_rearrange_firsttry (n m p q : ℕ)
+theorem add_rearrange_firsttry (n m p q : ℕ)
   : (n + m) + (p + q) = (m + n) + (p + q) :=
 begin
-  rw plus_comm,
+  rw add_comm,
   /- simp is a bit smarter though -/
-  simp [plus_comm]
+  /- ac_refl also works -/
+  simp [add_comm],
 end
 
 /-
@@ -200,17 +239,17 @@ Proof.
   rewrite → H. reflexivity. Qed.
 -/
 
-theorem plus_rearrange (n m p q : ℕ)
+theorem add_rearrange (n m p q : ℕ)
   : (n + m) + (p + q) = (m + n) + (p + q) :=
 begin
   have h : n + m = m + n,
-    rw plus_comm,
+    rw add_comm,
   rw h,
 end
 
 /- or tell it where to apply -/
-theorem plus_rearrange' (n m p q : ℕ)
-  : (n + m) + (p + q) = (m + n) + (p + q) := by rw plus_comm n m
+theorem add_rearrange' (n m p q : ℕ)
+  : (n + m) + (p + q) = (m + n) + (p + q) := by rw add_comm n m
 
 /-
 Theorem plus_assoc' : ∀n m p : nat,
@@ -219,13 +258,12 @@ Proof. intros n m p. induction n as [| n' IHn']. reflexivity.
   simpl. rewrite → IHn'. reflexivity. Qed.
 -/
 
-/- fighting tactic differences is starting to suck -/
-theorem plus_assoc' (n m p : ℕ) : n + (m + p) = (n + m) + p :=
+theorem add_assoc' (n m p : ℕ) : n + (m + p) = (n + m) + p :=
 begin
   induction n with n ih,
-    repeat { rw zero_add },
-  repeat { rw plus_Sn_m },
-  rw ih
+    rw [zero_add, zero_add],
+  rw [succ_add, succ_add, succ_add],
+  rw ih,
 end
 
 /-
@@ -241,18 +279,19 @@ Proof.
 
 /- we can do better -/
 /- show / have are kind of strange -/
-theorem plus_assoc'' (n m p : ℕ) : n + (m + p) = (n + m) + p :=
+theorem add_assoc'' (n m p : ℕ) : n + (m + p) = (n + m) + p :=
 begin
   induction n,
-    case zero {
-      show 0 + (m + p) = (0 + m) + p,
-      repeat { rw zero_add }
-    },
-
-  case succ : n' ih {
-    show (succ n') + (m + p) = ((succ n') + m) + p,
-    repeat {rw plus_Sn_m },
-    show succ (n' + (m + p)) = succ ((n' + m) + p),
-    rw ih
+  case zero {
+    show 0 + (m + p) = (0 + m) + p,
+    rw [zero_add, zero_add],
+  },
+  case succ : n ih {
+    show (succ n) + (m + p) = ((succ n) + m) + p,
+    rw [succ_add, succ_add, succ_add],
+    show succ (n + (m + p)) = succ ((n + m) + p),
+    rw ih,
   }
 end
+
+end induction
