@@ -1,3 +1,7 @@
+import tactic.basic
+
+namespace basics
+
 /-
 Inductive day : Type :=
   | monday
@@ -34,8 +38,6 @@ Definition next_weekday (d:day) : day :=
   end.
 -/
 
-/- add simp because coq makes definitions available to tactics -/
-@[simp]
 def next_weekday : day → day
 | monday := tuesday
 | tuesday := wednesday
@@ -59,7 +61,7 @@ Example test_next_weekday:
 Proof. simpl. reflexivity. Qed.
 -/
 
-example : next_weekday (next_weekday saturday) = tuesday := by simp
+example : next_weekday (next_weekday saturday) = tuesday := by refl
 
 /-
 Inductive bool : Type :=
@@ -67,14 +69,14 @@ Inductive bool : Type :=
   | false.
 -/
 
-/- there seem to be issues redefining bool -/
-namespace bool
+/- tt/ff are always in scope and the compiler will pick them over your impl -/
+namespace myBool
 
 inductive bool : Type
 | tt
 | ff
 
-end bool
+end myBool
 
 /-
 Definition negb (b:bool) : bool :=
@@ -94,18 +96,15 @@ Definition orb (b1:bool) (b2:bool) : bool :=
   end.
 -/
 
-@[simp]
-def negb : bool → bool
+def bnot : bool → bool
 | tt := ff
 | _ := tt
 
-@[simp]
-def andb : bool → bool → bool
+def band : bool → bool → bool
 | tt b₂ := b₂
 | _ _ := ff
 
-@[simp]
-def orb : bool → bool → bool
+def bor : bool → bool → bool
 | ff b₂ := b₂
 | _ _ := tt
 
@@ -120,10 +119,10 @@ Example test_orb4: (orb true true) = true.
 Proof. simpl. reflexivity. Qed.
 -/
 
-example : orb tt ff = tt := by simp
-example : orb ff ff = ff := by simp
-example : orb ff tt = tt := by simp
-example : orb tt tt = tt := by simp
+example : bor tt ff = tt := by refl
+example : bor ff ff = ff := by refl
+example : bor ff tt = tt := by refl
+example : bor tt tt = tt := by refl
 
 /-
 Notation "x && y" := (andb x y).
@@ -132,14 +131,10 @@ Example test_orb5: false || false || true = true.
 Proof. simpl. reflexivity. Qed.
 -/
 
-/-
-still can't shadow the prelude
-using precedence of equivalent notation in core
--/
-infix ` &&' `:70 := andb
-infix ` ||' `:65 := orb
+local infix && := band
+local infix || := bor
 
-example : ff ||' ff ||' tt = tt := by simp
+example : ff || ff || tt = tt := by refl
 
 /-
 Definition nandb (b1:bool) (b2:bool) : bool
@@ -154,15 +149,14 @@ Example test_nandb4: (nandb true true) = false.
 (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-def nandb : bool → bool → bool
+def bnand : bool → bool → bool
 | tt tt := ff
 | _ _ := tt
 
-example : nandb tt ff = tt := by simp
-example : nandb ff ff = tt := by simp
-example : nandb ff tt = tt := by simp
-example : nandb tt tt = ff := by simp
+example : bnand tt ff = tt := by refl
+example : bnand ff ff = tt := by refl
+example : bnand ff tt = tt := by refl
+example : bnand tt tt = ff := by refl
 
 /-
 Definition andb3 (b1:bool) (b2:bool) (b3:bool) : bool
@@ -177,14 +171,13 @@ Example test_andb34: (andb3 true true false) = false.
 (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-def andb3 (b₁ : bool) (b₂ : bool) (b₃ : bool) : bool :=
-  andb b₁ (andb b₂ b₃)
+def band3 (b₁ : bool) (b₂ : bool) (b₃ : bool) : bool :=
+  band b₁ (band b₂ b₃)
 
-example : andb3 tt tt tt = tt := by simp
-example : andb3 ff tt tt = ff := by simp
-example : andb3 tt ff tt = ff := by simp
-example : andb3 tt tt ff = ff := by simp
+example : band3 tt tt tt = tt := by refl
+example : band3 ff tt tt = ff := by refl
+example : band3 tt ff tt = ff := by refl
+example : band3 tt tt ff = ff := by refl
 
 /-
 Check true.
@@ -194,14 +187,14 @@ Check (negb true).
 -/
 
 #check tt
-#check negb tt
+#check bnot tt
 
 /-
 Check negb.
 (* ===> negb : bool -> bool *)
 -/
 
-#check negb
+#check bnot
 
 /-
 Inductive rgb : Type :=
@@ -298,7 +291,7 @@ def all_zero : nybble → bool
 Module NatPlayground.
 -/
 
-namespace NatPlayground
+namespace myNat
 
 /-
 Inductive nat : Type :=
@@ -306,11 +299,11 @@ Inductive nat : Type :=
   | S (n : nat).
 -/
 
-inductive nat' : Type
+inductive nat : Type
 | zero
-| succ (n : nat')
+| succ (n : nat)
 
-open nat'
+end myNat
 
 /-
 Inductive nat' : Type :=
@@ -318,7 +311,7 @@ Inductive nat' : Type :=
   | tick (foo : nat').
 -/
 
-inductive nat'' : Type
+inductive nat' : Type
 | stop
 | tick (foo : nat')
 
@@ -330,31 +323,26 @@ Definition pred (n : nat) : nat :=
   end.
 -/
 
-/- issues again with prelude stuff -/
-def pred : nat' → nat'
+open nat
+
+def pred : ℕ → ℕ
 | zero := zero
 | (succ n) := n
 
 /-
-End NatPlayground.
--/
-
-end NatPlayground
-
-/-
 Check (S (S (S (S O)))).
   (* ===> 4 : nat *)
+
 Definition minustwo (n : nat) : nat :=
   match n with
     | O ⇒ O
     | S O ⇒ O
     | S (S n') ⇒ n'
   end.
+
 Compute (minustwo 4).
   (* ===> 2 : nat *)
 -/
-
-open nat
 
 #check succ (succ (succ (succ zero)))
 
@@ -384,7 +372,6 @@ Fixpoint evenb (n:nat) : bool :=
 -/
 
 /- recursion just works with this form -/
-@[simp]
 def evenb : ℕ → bool
 | 0 := tt
 | 1 := ff
@@ -398,12 +385,10 @@ Example test_oddb2: oddb 4 = false.
 Proof. simpl. reflexivity. Qed.
 -/
 
-@[simp]
-def oddb := negb ∘ evenb
+def oddb := bnot ∘ evenb
 
-/- no real reason to compare to tt/ff -/
-example : oddb 1 := by simp [evenb, oddb]
-example : ¬oddb 4 := by simp [evenb, oddb]
+example : oddb 1 = tt := by refl
+example : oddb 4 = ff := by refl
 
 /-
 Module NatPlayground2.
@@ -414,18 +399,15 @@ Fixpoint plus (n : nat) (m : nat) : nat :=
   end.
 -/
 
-namespace NatPlayground2
-
-@[simp]
-def plus : ℕ → ℕ → ℕ
+def add : ℕ → ℕ → ℕ
 | 0 m := m
-| (n + 1) m := (plus n m) + 1
+| (n + 1) m := (add n m) + 1
 
 /-
 Compute (plus 3 2).
 -/
 
-#reduce plus 3 2
+#reduce add 3 2
 
 /-
 Fixpoint mult (n m : nat) : nat :=
@@ -437,11 +419,10 @@ Example test_mult1: (mult 3 3) = 9.
 Proof. simpl. reflexivity. Qed.
 -/
 
-/- match doesn't seem to work with recursion -/
-@[simp]
-def mult : ℕ → ℕ → ℕ
+/- match doesn't work with recursion -/
+def mul : ℕ → ℕ → ℕ
 | 0 m := 0
-| (n + 1) m := plus m (mult n m)
+| (n + 1) m := add m (mul n m)
 
 /-
 Fixpoint minus (n m:nat) : nat :=
@@ -450,7 +431,9 @@ Fixpoint minus (n m:nat) : nat :=
   | S _ , O ⇒ n
   | S n', S m' ⇒ minus n' m'
   end.
+
 End NatPlayground2.
+
 Fixpoint exp (base power : nat) : nat :=
   match power with
     | O ⇒ S O
@@ -458,38 +441,33 @@ Fixpoint exp (base power : nat) : nat :=
   end.
 -/
 
-@[simp]
-def minus : ℕ → ℕ → ℕ
+def sub : ℕ → ℕ → ℕ
 | 0 _ := 0
 | n 0 := n
-| (n + 1) (m + 1) := minus n m
+| (n + 1) (m + 1) := sub n m
 
-end NatPlayground2
-
-open NatPlayground2
-
-/- the differences for left and right of colon are so weird -/
-@[simp]
+/- left of the colon is fixed in recursive calls -/
 def exp (base : ℕ) : ℕ → ℕ
 | 0 := 1
-| (p + 1) := mult base (exp p)
+| (p + 1) := mul base (exp p)
 
 /-
 Fixpoint factorial (n:nat) : nat
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+
 Example test_factorial1: (factorial 3) = 6.
 (* FILL IN HERE *) Admitted.
+
 Example test_factorial2: (factorial 5) = (mult 10 12).
 (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 def factorial : ℕ → ℕ
 | 0 := 1
-| (n + 1) := mult (n + 1) (factorial n)
+| (n + 1) := mul (n + 1) (factorial n)
 
-example : factorial 3 = 6 := by simp
-example : factorial 5 = mult 10 12 := by simp
+example : factorial 3 = 6 := by refl
+example : factorial 5 = mul 10 12 := by refl
 
 /-
 Notation "x + y" := (plus x y)
@@ -504,11 +482,13 @@ Notation "x * y" := (mult x y)
 Check ((0 + 1) + 1).
 -/
 
-infixl ` +' `:65 := plus
-infixl ` -' `:65 := minus
-infixl ` *' `:70 := mult
+/- actual definitions use type classes -/
+/- this breaks the ability to pattern match on + 1 instead of succ -/
+local infixl + := add
+local infixl - := sub
+local infixl * := mul
 
-#check ((0 +' 1) +' 1)
+#check ((0 + 1) + 1)
 
 /-
 Fixpoint eqb (n m : nat) : bool :=
@@ -524,12 +504,11 @@ Fixpoint eqb (n m : nat) : bool :=
   end.
 -/
 
-@[simp]
 def eqb : ℕ → ℕ → bool
 | 0 0 := tt
-| 0 (m + 1) := ff
+| 0 (succ m) := ff
 | _ 0 := ff
-| (n + 1) (m + 1) := eqb n m
+| (succ n) (succ m) := eqb n m
 
 /-
 Fixpoint leb (n m : nat) : bool :=
@@ -541,32 +520,30 @@ Fixpoint leb (n m : nat) : bool :=
       | S m' ⇒ leb n' m'
       end
   end.
+
 Example test_leb1: (leb 2 2) = true.
 Proof. simpl. reflexivity. Qed.
+
 Example test_leb2: (leb 2 4) = true.
 Proof. simpl. reflexivity. Qed.
+
 Example test_leb3: (leb 4 2) = false.
 Proof. simpl. reflexivity. Qed.
 -/
 
-@[simp]
 def leb : ℕ → ℕ → bool
-/- no idea why i can't just do this -/
-/- 0 _ := tt -/
-| 0 0 := tt
-| 0 (m + 1) := tt
+| 0 _ := tt
 | _ 0 := ff
-| (n + 1) (m + 1) := leb n m
+| (succ n) (succ m) := leb n m
 
-#print leb._main
-
-example : leb 2 2 := by simp
-example : leb 0 2 := by simp
-example : ¬leb 4 2 := by simp
+example : leb 2 2 = tt := by refl
+example : leb 0 2 = tt := by refl
+example : leb 4 2 = ff := by refl
 
 /-
 Notation "x =? y" := (eqb x y) (at level 70) : nat_scope.
 Notation "x <=? y" := (leb x y) (at level 70) : nat_scope.
+
 Example test_leb3': (4 <=? 2) = false.
 Proof. simpl. reflexivity. Qed.
 -/
@@ -574,31 +551,34 @@ Proof. simpl. reflexivity. Qed.
 infix ` =? `:50 := eqb
 infix ` <=? `:50 := leb
 
-example : ¬(4 <=? 2) := by simp
+example : (4 <=? 2) = ff := by refl
 
 /-
 Definition ltb (n m : nat) : bool
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+
 Notation "x <? y" := (ltb x y) (at level 70) : nat_scope.
+
 Example test_ltb1: (ltb 2 2) = false.
 (* FILL IN HERE *) Admitted.
+
 Example test_ltb2: (ltb 2 4) = true.
 (* FILL IN HERE *) Admitted.
+
 Example test_ltb3: (ltb 4 2) = false.
 (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 def ltb : ℕ → ℕ → bool
 | _ 0 := ff
-| 0 (m + 1) := tt
-| (n + 1) (m + 1) := ltb n m
+| 0 (succ m) := tt
+| (succ n) (succ m) := ltb n m
 
 infix ` <? `:50 := ltb
 
-example : ¬ltb 2 2 := by simp
-example : ltb 2 4 := by simp
-example : ¬ltb 4 2 := by simp
+example : ltb 2 2 = ff := by refl
+example : ltb 2 4 = tt := by refl
+example : ltb 4 2 = ff := by refl
 
 /-
 Theorem plus_O_n : ∀n : nat, 0 + n = n.
@@ -607,8 +587,8 @@ Proof.
 -/
 
 /- not sure how to get simp to do intro, so moved to the left -/
-/- using our notation and simp only to avoid using zero_add -/
-theorem plus_0_n (n : ℕ) : 0 +' n = n := by simp only [plus]
+/- using our notation and simp only to avoid using library zero_add -/
+theorem zero_add (n : ℕ) : 0 + n = n := by rw add
 
 /-
 Theorem plus_O_n' : ∀n : nat, 0 + n = n.
@@ -616,7 +596,7 @@ Proof.
   intros n. reflexivity. Qed.
 -/
 
-theorem plus_0_n' (n : ℕ) : 0 +' n = n := by refl
+theorem zero_add' (n : ℕ) : 0 + n = n := by refl
 
 /-
 Theorem plus_1_l : ∀n:nat, 1 + n = S n.
@@ -627,8 +607,8 @@ Proof.
   intros n. reflexivity. Qed.
 -/
 
-theorem plus_1_l (n : ℕ) : 1 +' n = succ n := by simp
-theorem mult_0_l (n : ℕ) : 0 *' n = 0 := by simp
+theorem one_plus (n : ℕ) : 1 + n = succ n := by refl
+theorem zero_mul (n : ℕ) : 0 * n = 0 := by refl
 
 /-
 Theorem plus_id_example : ∀n m:nat,
@@ -644,8 +624,7 @@ Proof.
   reflexivity. Qed.
 -/
 
-example (n m : ℕ) (h : n = m) : n +' n = m +' m :=
-  by simp *
+example (n m : ℕ) (h : n = m) : n + n = m + m := by rw h
 
 /-
 Theorem plus_id_exercise : ∀n m o : nat,
@@ -654,9 +633,8 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 theorem plus_id (n m o : ℕ) (hnm : n = m) (hmo : m = o) :
-  n +' m = m +' o := by simp *
+  n + m = m + o := by rw [hnm, hmo]
 
 /-
 Theorem mult_0_plus : ∀n m : nat,
@@ -667,9 +645,8 @@ Proof.
   reflexivity. Qed.
 -/
 
-@[simp]
-theorem mult_0_plus (n m : ℕ) : (0 +' n) *' m = n *' m :=
-  by rw plus_0_n
+theorem zero_plus_mul (n m : ℕ) : (0 + n) * m = n * m :=
+  by rw zero_add
 
 /-
 Theorem mult_S_1 : ∀n m : nat,
@@ -681,10 +658,8 @@ Proof.
      rewrite, but please do use rewrite for the sake of the exercise.) *)
 -/
 
-open NatPlayground
-
-theorem mult_S_1 (n m : ℕ) (h : m = succ n)
-  : m *' (1 +' n) = m *' m := by simp *
+theorem mul_one_add (n m : ℕ) (h : m = succ n)
+  : m * (1 + n) = m * m := by rw [one_plus, ←h]
 
 /-
 Theorem plus_1_neq_0_firsttry : ∀n : nat,
@@ -697,7 +672,7 @@ Abort.
 
 /- sorry is reported when importing as well, so commenting this out -/
 /-
-theorem plus_1_neq_0_firsttry (n : ℕ) : (n +' 1) =? 0 = ff :=
+theorem plus_one_neq_zero_firsttry (n : ℕ) : (n + 1) =? 0 = ff :=
 begin
   try { simp },
   sorry
@@ -713,9 +688,12 @@ Proof.
   - reflexivity. Qed.
 -/
 
-@[simp]
-theorem plus_1_neq_0 (n : ℕ) : (n +' 1) =? 0 = ff :=
-  by cases n; simp
+theorem plus_one_neq_zero (n : ℕ) : (n + 1) =? 0 = ff :=
+begin
+  cases n,
+    refl,
+  refl,
+end
 
 /-
 Theorem negb_involutive : ∀b : bool,
@@ -726,9 +704,12 @@ Proof.
   - reflexivity. Qed.
 -/
 
-@[simp]
-theorem negb_involutive (b : bool) : negb (negb b) = b :=
-  by cases b; simp
+theorem bnot_involutive (b : bool) : bnot (bnot b) = b :=
+begin
+  cases b,
+    refl,
+  refl,
+end
 
 /-
 Theorem andb_commutative : ∀b c, andb b c = andb c b.
@@ -743,9 +724,16 @@ Proof.
 Qed.
 -/
 
-@[simp]
-theorem andb_commutative (b c : bool) : andb b c = andb c b :=
-  by cases b; cases c; simp
+theorem band_commutative (b c : bool) : band b c = band c b :=
+begin
+  cases b,
+    cases c,
+      refl,
+    refl,
+  cases c,
+    refl,
+  refl,
+end
 
 /-
 Theorem andb_commutative' : ∀b c, andb b c = andb c b.
@@ -760,13 +748,19 @@ Proof.
 Qed.
 -/
 
-theorem andb_commutative' (b c : bool) : andb b c = and c b :=
+theorem band_commutative' (b c : bool) : band b c = band c b :=
 begin
 cases b,
-  { cases c,
-    { refl },
-    { refl } },
-  { cases c, repeat { refl } }
+case ff {
+  cases c,
+  case ff { refl, },
+  case tt { refl, }
+},
+case tt {
+  cases c,
+  case ff { refl, },
+  case tt { refl, },
+},
 end
 
 /-
@@ -791,11 +785,38 @@ Proof.
 Qed.
 -/
 
-/- bullets don't appear to be a thing in lean -/
-@[simp]
-theorem andb3_exchange (b c d : bool)
-  : andb (andb b c) d = andb (andb b d) c :=
-by cases b; cases c; cases d; refl
+/- this is horrible without combinators or automation -/
+theorem band3_exchange (b c d : bool)
+  : band (band b c) d = band (band b d) c :=
+begin
+  cases b,
+  case ff {
+    cases c,
+    case ff {
+      cases d,
+      case ff { refl, },
+      case tt { refl, },
+    },
+    case tt {
+      cases d,
+      case ff { refl, },
+      case tt { refl, },
+    },
+  },
+  case tt {
+    cases c,
+    case ff {
+      cases d,
+      case ff { refl, },
+      case tt { refl, },
+    },
+    case tt {
+      cases d,
+      case ff { refl, },
+      case tt { refl, },
+    },
+  }
+end
 
 /-
 Theorem plus_1_neq_0' : ∀n : nat,
@@ -817,9 +838,24 @@ Qed.
 -/
 
 /-
-not sure if lean has anything like this
-no point repeating previous definitions
+nb. requires mathlib
+TODO: rintro doesn't have case labels
 -/
+theorem plus_one_neq_zero' : ∀n, n + 1 =? 0 = ff :=
+begin
+  rintro ⟨n⟩,
+    refl,
+  refl,
+end
+
+theorem band_commutative'' : ∀b c, band b c = band c b :=
+begin
+  rintro ⟨b⟩ ⟨c⟩,
+        refl,
+      refl,
+    refl,
+  refl,
+end
 
 /-
 Theorem andb_true_elim2 : ∀b c : bool,
@@ -828,20 +864,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem andb_true_elim2 (b c : bool) (h : andb b c = tt)
-  : c = tt :=
-begin
-  cases b,
-    contradiction,
-  simp at h,
-  exact h
-end
-
-theorem andb_true_elim2' (b c : bool) (h : andb b c = tt)
+theorem band_true_elim2 (b c : bool) (h : band b c = tt)
   : c = tt :=
 begin
   cases c,
-    rwa [andb_commutative, andb] at h,
+    rwa [band_commutative, band] at h,
   refl,
 end
 
@@ -852,9 +879,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem zero_nbeq_plus_1 (n : ℕ) : 0 =? (n + 1) = ff :=
-  by cases n; simp
+theorem zero_nbeq_plus_one (n : ℕ) : 0 =? (n + 1) = ff :=
+begin
+  cases n,
+    refl,
+  refl,
+end
 
 /-
 Theorem identity_fn_applied_twice :
@@ -865,20 +895,18 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 theorem identity_fn_applied_twice
   (f : bool → bool)
   (h : ∀ x : bool, f x = x)
-  (b : bool) : f (f b) = b := by simp *
+  (b : bool) : f (f b) = b := by rw [h, h]
 
-@[simp]
 theorem negation_fn_applied_twice
   (f : bool → bool)
-  (h : ∀ x : bool, f x = negb x)
+  (h : ∀ x : bool, f x = bnot x)
   (b : bool) : f (f b) = b :=
 begin
-  have : negb (negb b) = b, by cases b; simp,
-  simp *
+  rw [h, h],
+  rw bnot_involutive,
 end
 
 /-
@@ -890,14 +918,13 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/-
- "You will probably need both destruct and rewrite,
- but destructing everything in sight is not the best way."
-
- lean says lol
--/
-theorem andb_eq_orb (b c : bool) (h : andb b c = orb b c)
-  : b = c := by cases b; cases c; simp * at *
+theorem band_eq_bor (b c : bool) (h : band b c = bor b c) : b = c :=
+begin
+  cases b,
+    rwa [band, bor] at h,
+  rw [band, bor] at h,
+  rw h,
+end
 
 /-
 Inductive bin : Type :=
@@ -916,25 +943,25 @@ open bin
 /-
 Fixpoint incr (m:bin) : bin
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
+
 Fixpoint bin_to_nat (m:bin) : nat
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-@[simp]
 def incr : bin → bin
 | Z := B Z
 | (A b) := B b
 | (B b) := A (incr b)
 
-@[simp]
 def bin_to_nat : bin → ℕ
 | Z := 0
 | (A b) := 2 * bin_to_nat b
 | (B b) := 2 * bin_to_nat b + 1
 
-@[simp]
 def nat_to_bin : ℕ → bin
 | 0 := Z
-| (n + 1) := incr (nat_to_bin n)
+| (succ n) := incr (nat_to_bin n)
 
 example : bin_to_nat (nat_to_bin 127) = 127 := by refl
+
+end basics
