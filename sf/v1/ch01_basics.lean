@@ -323,7 +323,7 @@ Definition pred (n : nat) : nat :=
   end.
 -/
 
-open nat
+open nat (succ zero)
 
 def pred : ℕ → ℕ
 | zero := zero
@@ -531,9 +531,12 @@ Example test_leb3: (leb 4 2) = false.
 Proof. simpl. reflexivity. Qed.
 -/
 
+/-
+TODO - examine why wildcard on left breaks things
+-/
 def leb : ℕ → ℕ → bool
 | 0 _ := tt
-| _ 0 := ff
+| (succ n) 0 := ff
 | (succ n) (succ m) := leb n m
 
 example : leb 2 2 = tt := by refl

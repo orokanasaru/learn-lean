@@ -1,5 +1,9 @@
 import data.nat.basic
+import tactic.basic
 import .ch01_basics
+
+open basics (oddb eqb leb)
+open nat (pred zero succ)
 
 namespace lists
 
@@ -17,6 +21,7 @@ Inductive natprod : Type :=
 | pair (n1 n2 : nat).
 -/
 
+/- in lean, prod is actually a structure -/
 inductive natprod : Type
 | pair (n1 n2 : ℕ)
 
@@ -41,10 +46,8 @@ Compute (fst (pair 3 5)).
 (* ===> 3 *)
 -/
 
-definition fst (p : natprod) : ℕ :=
-match p with
+definition fst : natprod → ℕ
 | (pair x _) := x
-end
 
 definition snd : natprod → ℕ
 | (pair _ y) := y
@@ -60,8 +63,9 @@ using parentheses breaks things in surprising ways
 definition of minus below fails to compile at first closing paren
 
 update : using braces breaks typeclass instance definitions
+should be okay if local
 -/
-notation `⦃` x , y `⦄` := pair x y
+local notation {x, y} := pair x y
 
 /-
 Compute (fst (3,5)).
@@ -82,16 +86,16 @@ Definition swap_pair (p : natprod) : natprod :=
   end.
 -/
 
-#reduce fst ⦃ 3, 5 ⦄
+#reduce fst {3, 5}
 
 def fst' : natprod → ℕ
-| ⦃ x,_ ⦄ := x
+| {x, _} := x
 
 def snd' : natprod → ℕ
-| ⦃ _,y ⦄ := y
+| {_, y} := y
 
 def swap_pair : natprod → natprod
-| ⦃ x,y ⦄ := ⦃ y,x ⦄
+| {x, y} := {y, x}
 
 /-
 Fixpoint minus (n m : nat) : nat :=
@@ -108,12 +112,10 @@ with the match notation.
 the point is to show comma fun, so i think it's ok
 to use the built in subtraction
 -/
-def minus (n m : ℕ) : ℕ :=
-match n, m with
-| 0, _ := 0
-| _, 0 := 0
-| n + 1, m + 1 := n - m
-end
+def minus : ℕ → ℕ → ℕ
+| 0 _ := 0
+| _ 0 := 0
+| (n + 1) (m + 1) := minus n m
 
 /-
 (* Can't match on a pair with multiple patterns: *)
@@ -132,20 +134,13 @@ Definition bad_minus (n m : nat) : nat :=
 -/
 
 /-
-honestly not sure about the point of this exercise
--/
-/-
-def bad_fst (p : natprod) : ℕ :=
-match p with
-| x, y := x
-end
+def bad_fst : natprod → ℕ
+| x y := x
 
-def bad_minus (n m : ℕ) : ℕ :=
-match n, m with
+def bad_minus : ℕ → ℕ → ℕ
 | {0, _} := 0
 | {_, 0} := n
 | {n + 1, m + 1} := n - m
-end
 -/
 
 /-
@@ -156,7 +151,15 @@ Proof.
 -/
 
 theorem surjective_pairing' (n m : ℕ)
-  : ⦃n, m⦄ = ⦃fst ⦃n, m⦄, snd ⦃n, m⦄⦄ := rfl
+  : {n, m} = {fst {n, m}, snd {n, m}} := rfl
+
+/-
+Theorem surjective_pairing_stuck : ∀(p : natprod),
+  p = (fst p, snd p).
+Proof.
+  simpl. (* Doesn't reduce anything! *)
+Abort.
+-/
 
 /-
 theorem surjective_pairing_stuck (p : natprod)
@@ -174,9 +177,11 @@ Proof.
   intros p. destruct p as [n m]. simpl. reflexivity. Qed.
 -/
 
-theorem surjective_pairing (p : natprod)
-  : p = ⦃ fst p, snd p ⦄ :=
-by cases p; reflexivity
+theorem surjective_pairing (p : natprod) : p = {fst p, snd p} :=
+begin
+  cases p with n m,
+  refl,
+end
 
 /-
 Theorem snd_fst_is_swap : ∀(p : natprod),
@@ -185,9 +190,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem snd_fst_is_swap (p : natprod)
-  : ⦃snd p, fst p⦄ = swap_pair p :=
-by cases p; reflexivity
+theorem snd_fst_is_swap (p : natprod) : {snd p, fst p} = swap_pair p :=
+begin
+  cases p with n m,
+  refl,
+end
 
 /-
 Theorem fst_swap_is_snd : ∀(p : natprod),
@@ -196,9 +203,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem fst_swap_is_snd (p : natprod)
-  : fst (swap_pair p) = snd p :=
-by cases p; reflexivity
+theorem fst_swap_is_snd (p : natprod) : fst (swap_pair p) = snd p :=
+begin
+  cases p with n m,
+  refl,
+end
 
 /-
 Inductive natlist : Type :=
@@ -229,8 +238,8 @@ Notation "[ x ; .. ; y ]" := (cons x .. (cons y nil) ..).
 same as above. there are conflicts with core using brackets
 not sure how the foldr notation works
 -/
-infixr ` :: ` := cons
-notation `⟦` l:(foldr `, ` (h t, cons h t) nil `⟧`) := l
+local infixr :: := cons
+local notation `[` l:(foldr `, ` (h t, cons h t) nil `]`) := l
 
 /-
 Definition mylist1 := 1 :: (2 :: (3 :: nil)).
@@ -240,7 +249,7 @@ Definition mylist3 := [1;2;3].
 
 def mylist1 := 1 :: (2 :: (3 :: nil))
 def mylist2 := 1 :: 2 :: 3 :: nil
-def mylist3 := ⟦1,2,3⟧
+def mylist3 := [1, 2, 3]
 
 /-
 Fixpoint repeat (n count : nat) : natlist :=
@@ -262,7 +271,6 @@ Fixpoint length (l:natlist) : nat :=
   end.
 -/
 
-@[simp]
 def length : natlist → ℕ
 | nil := 0
 | (_ :: t) := length t + 1
@@ -275,10 +283,9 @@ Fixpoint app (l1 l2 : natlist) : natlist :=
   end.
 -/
 
-@[simp]
-def app : natlist → natlist → natlist
+def append : natlist → natlist → natlist
 | nil l2 := l2
-| (h::t) l2 := h :: app t l2
+| (h::t) l2 := h :: append t l2
 
 /-
 Notation "x ++ y" := (app x y)
@@ -294,11 +301,11 @@ Example test_app3: [1;2;3] ++ nil = [1;2;3].
 Proof. reflexivity. Qed.
 -/
 
-infix ` ++ ` := app
+infix ++ := append
 
-example : ⟦1,2,3⟧ ++ ⟦4,5⟧ = ⟦1,2,3,4,5⟧ := rfl
-example : nil ++ ⟦4,5⟧ = ⟦4,5⟧ := rfl
-example : ⟦1,2,3⟧ ++ nil = ⟦1,2,3⟧ := rfl
+example : [1, 2, 3] ++ [4, 5] = [1, 2, 3, 4, 5] := rfl
+example : nil ++ [4, 5] = [4, 5] := rfl
+example : [1, 2, 3] ++ nil = [1, 2, 3] := rfl
 
 /-
 Definition hd (default:nat) (l:natlist) : nat :=
@@ -323,19 +330,17 @@ Example test_tl: tl [1;2;3] = [2;3].
 Proof. reflexivity. Qed.
 -/
 
-@[simp]
-def hd (default : ℕ) : natlist → ℕ
+def head (default : ℕ) : natlist → ℕ
 | nil := default
 | (h::_) := h
 
-@[simp]
-def tl : natlist → natlist
+def tail : natlist → natlist
 | nil := nil
 | (_::t) := t
 
-example : hd 0 ⟦1,2,3⟧ = 1 := rfl
-example : hd 0 ⟦⟧ = 0 := rfl
-example : tl ⟦1,2,3⟧ = ⟦2,3⟧ := rfl
+example : head 0 [1, 2, 3] = 1 := rfl
+example : head 0 [] = 0 := rfl
+example : tail [1, 2, 3] = [2, 3] := rfl
 
 /-
 Fixpoint nonzeros (l:natlist) : natlist
@@ -368,28 +373,26 @@ Example test_countoddmembers3:
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 def nonzeros : natlist → natlist
 | ((n + 1)::t) := (n + 1)::nonzeros t
 | (_::t) := nonzeros t
 | _ := nil
 
-example : nonzeros ⟦0,1,0,2,3,0,0⟧ = ⟦1,2,3⟧ := rfl
+example : nonzeros [0, 1, 0, 2, 3, 0, 0] = [1, 2, 3] := rfl
 
-@[simp]
 def filter (p : ℕ → bool) : natlist → natlist
 | (h::t) := if p h then h::filter t else filter t
 | _ := nil
 
 def oddmembers := filter oddb
 
-example : oddmembers ⟦0,1,0,2,3,0,0⟧ = ⟦1,3⟧ := rfl
+example : oddmembers [0, 1, 0, 2, 3, 0, 0] = [1, 3] := rfl
 
 def countoddmembers := length ∘ oddmembers
 
-example : countoddmembers ⟦1,0,3,1,4,5⟧ = 4 := rfl
+example : countoddmembers [1, 0, 3, 1, 4, 5] = 4 := rfl
 
-example : countoddmembers ⟦0,2,4⟧ = 0 := rfl
+example : countoddmembers [0, 2, 4] = 0 := rfl
 
 example : countoddmembers nil = 0 := rfl
 
@@ -414,19 +417,18 @@ Example test_alternate4:
   (* FILL IN HERE *) Admitted.
 -/
 
-/- this is trivial in lean -/
 def alternate : natlist → natlist → natlist
 | nil r := r
 | l nil := l
 | (lh::lt) (rh::rt) := lh::rh::alternate lt rt
 
-example : alternate ⟦1,2,3⟧ ⟦4,5,6⟧ = ⟦1,4,2,5,3,6⟧ := rfl
+example : alternate [1, 2, 3] [4, 5, 6] = [1, 4, 2, 5, 3, 6] := rfl
 
-example : alternate ⟦1⟧ ⟦4,5,6⟧ = ⟦1,4,5,6⟧ := rfl
+example : alternate [1] [4, 5, 6] = [1, 4, 5, 6] := rfl
 
-example : alternate ⟦1,2,3⟧ ⟦4⟧ = ⟦1,4,2,3⟧ := rfl
+example : alternate [1, 2, 3] [4] = [1, 4, 2, 3] := rfl
 
-example : alternate ⟦⟧ ⟦20,30⟧ = ⟦20,30⟧ := rfl
+example : alternate [] [20, 30] = [20, 30] := rfl
 
 /-
 Definition bag := natlist.
@@ -440,7 +442,6 @@ Fixpoint count (v:nat) (s:bag) : nat
 -/
 
 /- i really feel like i'm starting to miss the point -/
-@[simp]
 def count (v : ℕ) : bag → ℕ :=
   length ∘ filter (eqb v)
 
@@ -452,9 +453,9 @@ Example test_count2: count 6 [1;2;3;1;4;1] = 0.
  (* FILL IN HERE *) Admitted.
 -/
 
-example : count 1 ⟦1,2,3,1,4,1⟧ = 3 := rfl
+example : count 1 [1, 2, 3, 1, 4, 1] = 3 := rfl
 
-example : count 6 ⟦1,2,3,1,4,1⟧ = 0 := rfl
+example : count 6 [1, 2, 3, 1, 4, 1] = 0 := rfl
 
 /-
 Definition sum : bag → bag → bag
@@ -482,24 +483,23 @@ Example test_member2: member 2 [1;4;1] = false.
 (* FILL IN HERE *) Admitted.
 -/
 
-/- sum is a reserved name for sum types -/
-def bag.sum := app
+def sum := append
 
-example : count 1 (bag.sum ⟦1,2,3⟧ ⟦1,4,1⟧) = 3 := rfl
+example : count 1 (sum [1, 2, 3] [1, 4, 1]) = 3 := rfl
 
 def add := cons
 
-example : count 1 (add 1 ⟦1,4,1⟧) = 3 := rfl
+example : count 1 (add 1 [1, 4, 1]) = 3 := rfl
 
-example : count 5 (add 1 ⟦1,4,1⟧) = 0 := rfl
+example : count 5 (add 1 [1, 4, 1]) = 0 := rfl
 
 def member (v : ℕ) : bag → bool
 | (h::t) := if eqb v h then tt else member t
 | _ := ff
 
-example : member 1 ⟦1,4,1⟧ = tt := rfl
+example : member 1 [1, 4, 1] = tt := rfl
 
-example : member 2 ⟦1,4,1⟧ = ff := rfl
+example : member 2 [1, 4, 1] = ff := rfl
 
 /-
 Fixpoint remove_one (v:nat) (s:bag) : bag
@@ -546,30 +546,29 @@ Example test_subset2: subset [1;2;2] [2;1;4;1] = false.
  (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 def remove_one (v : ℕ) : bag → bag
 | (h::t) := if eqb v h then t else h::remove_one t
 | _ := nil
 
-example : count 5 (remove_one 5 ⟦2,1,5,4,1⟧) = 0 := rfl
+example : count 5 (remove_one 5 [2, 1, 5, 4, 1]) = 0 := rfl
 
-example : count 5 (remove_one 5 ⟦2,1,4,1⟧) = 0 := rfl
+example : count 5 (remove_one 5 [2, 1, 4, 1]) = 0 := rfl
 
-example : count 4 (remove_one 5 ⟦2,1,4,5,1,4⟧) = 2 := rfl
+example : count 4 (remove_one 5 [2, 1, 4, 5, 1, 4]) = 2 := rfl
 
-example : count 5 (remove_one 5 ⟦2,1,5,4,5,1,4⟧) = 1 := rfl
+example : count 5 (remove_one 5 [2, 1, 5, 4, 5, 1, 4]) = 1 := rfl
 
 def remove_all (v : ℕ) : bag → bag
 | (h::t) := if eqb v h then remove_all t else h::remove_all t
 | _ := nil
 
-example : count 5 (remove_all 5 ⟦2,1,5,4,1⟧) = 0 := rfl
+example : count 5 (remove_all 5 [2, 1, 5, 4, 1]) = 0 := rfl
 
-example : count 5 (remove_all 5 ⟦2,1,4,1⟧) = 0 := rfl
+example : count 5 (remove_all 5 [2, 1, 4, 1]) = 0 := rfl
 
-example : count 4 (remove_all 5 ⟦2,1,4,5,1,4⟧) = 2 := rfl
+example : count 4 (remove_all 5 [2, 1, 4, 5, 1, 4]) = 2 := rfl
 
-example : count 5 (remove_all 5 ⟦2,1,5,4,5,1,4,5,1,4⟧) = 0 := rfl
+example : count 5 (remove_all 5 [2, 1, 5, 4, 5, 1, 4, 5, 1, 4]) = 0 := rfl
 
 /- this is about the dumbest way i can think of -/
 def subset : bag → bag → bool
@@ -578,9 +577,9 @@ def subset : bag → bag → bool
               else ff
 | _ _ := tt
 
-example : subset ⟦1,2⟧ ⟦2,1,4,1⟧ = tt := rfl
+example : subset [1, 2] [2, 1, 4, 1] = tt := rfl
 
-example : subset ⟦1,2,2⟧ ⟦2,1,4,1⟧ = ff := rfl
+example : subset [1, 2, 2] [2, 1, 4, 1] = ff := rfl
 
 /-
 Theorem nil_app : ∀l:natlist,
@@ -588,8 +587,7 @@ Theorem nil_app : ∀l:natlist,
 Proof. reflexivity. Qed.
 -/
 
-@[simp]
-theorem nil_app (l : natlist) : ⟦⟧ ++ l = l := rfl
+theorem nil_append (l : natlist) : [] ++ l = l := rfl
 
 /-
 Theorem tl_length_pred : ∀l:natlist,
@@ -603,12 +601,14 @@ Proof.
 -/
 
 /- TODO: be consistent about core vs defined usage -/
-open nat
 
-@[simp]
-theorem tl_length_pred (l : natlist)
-  : pred (length l) = length (tl l) :=
-by cases l; refl
+theorem length_tail (l : natlist)
+  : length (tail l) = pred (length l) :=
+begin
+  cases l with n l,
+    refl,
+  refl,
+end
 
 /-
 Theorem app_assoc : ∀l1 l2 l3 : natlist,
@@ -621,13 +621,16 @@ Proof.
     simpl. rewrite → IHl1'. reflexivity. Qed.
 -/
 
-theorem app_assoc (l₁ l₂ l₃ : natlist)
+theorem cons_append (n : ℕ) (l₁ l₂ : natlist)
+  : (n::l₁) ++ l₂ = n::(l₁ ++ l₂) := by refl
+
+theorem append_assoc (l₁ l₂ l₃ : natlist)
   : (l₁ ++ l₂) ++ l₃ = l₁ ++ (l₂ ++ l₃) :=
 begin
-  induction l₁ with hd tl ih,
+  induction l₁ with n l ih,
     refl,
-  simp,
-  rw ih
+  rw [cons_append, cons_append, cons_append],
+  rw ih,
 end
 
 /-
@@ -644,14 +647,13 @@ Example test_rev2: rev nil = nil.
 Proof. reflexivity. Qed.
 -/
 
-@[simp]
-def rev : natlist → natlist
-| (h::t) := rev t ++ ⟦h⟧
-| _ := ⟦⟧
+def reverse : natlist → natlist
+| (h::t) := reverse t ++ [h]
+| _ := []
 
-example : rev ⟦1,2,3⟧ = ⟦3,2,1⟧ := rfl
+example : reverse [1, 2, 3] = [3, 2, 1] := rfl
 
-example : rev nil = nil := rfl
+example : reverse nil = nil := rfl
 
 /-
 Theorem rev_length_firsttry : ∀l : natlist,
@@ -675,10 +677,10 @@ Abort.
 -/
 
 /-
-theorem rev_length_firsttry (l : natlist) :
-  length (rev l) = length l :=
+theorem length_reverse_firsttry (l : natlist) :
+  length (reverse l) = length l :=
 begin
-  induction l with hd tl ih,
+  induction l with n l ih,
     refl,
   simp,
   rw ←ih,
@@ -698,11 +700,22 @@ Proof.
     simpl. rewrite → IHl1'. reflexivity. Qed.
 -/
 
-@[simp]
-theorem app_length (l₁ l₂ : natlist)
+theorem length_nil : length nil = 0 := by refl
+
+theorem length_cons (n : ℕ) (l : natlist) : length (n::l) = length l + 1
+  := by refl
+
+theorem length_append (l₁ l₂ : natlist)
   : length (l₁ ++ l₂) = (length l₁) + (length l₂) :=
 begin
-  induction l₁; simp [*, add_assoc, add_comm 1],
+  induction l₁ with n l ih,
+    rw nil_append,
+    rw length_nil,
+    rw zero_add,
+  rw cons_append,
+  rw [length_cons, length_cons],
+  rw ih,
+  rw [add_assoc _ 1, add_comm 1, add_assoc],
 end
 
 /-
@@ -717,9 +730,16 @@ Proof.
     simpl. rewrite → IHl'. reflexivity. Qed.
 -/
 
-@[simp]
-theorem rev_length (l: natlist) : length (rev l) = length l :=
-by induction l; simp *
+theorem length_reverse (l: natlist) : length (reverse l) = length l :=
+begin
+  induction l with n l ih,
+    refl,
+  rw reverse,
+  rw length_append,
+  rw [length_cons, length_cons],
+  rw length_nil,
+  rw ih,
+end
 
 /-
 (*  Search rev. *)
@@ -729,6 +749,8 @@ by induction l; simp *
   not great, but
   ctrl+p #
 -/
+
+#print prefix lists
 
 /-
 Theorem app_nil_r : ∀l : natlist,
@@ -748,19 +770,39 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem app_nil_r (l : natlist) : l ++ ⟦⟧ = l :=
-by induction l; simp *
+theorem append_nil (l : natlist) : l ++ [] = l :=
+begin
+  induction l with n l ih,
+    refl,
+  rw cons_append,
+  rw ih,
+end
 
-@[simp]
-theorem rev_app_distr (l₁ l₂ : natlist)
-  : rev (l₁ ++ l₂) = rev l₂ ++ rev l₁ :=
-by induction l₁; simp [*, ←app_assoc]
+#print prefix list
 
-@[simp]
-theorem rev_involutive (l : natlist)
-  : rev (rev l) = l :=
-by induction l; simp *
+theorem reverse_append (l₁ l₂ : natlist)
+  : reverse (l₁ ++ l₂) = reverse l₂ ++ reverse l₁ :=
+begin
+  induction l₁ with n l₁ ih,
+    rw nil_append,
+    rw reverse,
+    rw append_nil,
+  rw cons_append,
+  rw [reverse, reverse],
+  rw ih,
+  rw append_assoc,
+end
+
+theorem reverse_involutive (l : natlist)
+  : reverse (reverse l) = l :=
+begin
+  induction l with n l ih,
+    refl,
+  rw reverse,
+  rw reverse_append,
+  rw ih,
+  refl,
+end
 
 /-
 Theorem app_assoc4 : ∀l1 l2 l3 l4 : natlist,
@@ -769,16 +811,29 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem app_assoc4 (l₁ l₂ l₃ l₄ : natlist)
+theorem append_assoc4 (l₁ l₂ l₃ l₄ : natlist)
   : l₁ ++ (l₂ ++ (l₃ ++ l₄)) = ((l₁ ++ l₂) ++ l₃) ++ l₄ :=
-by simp [app_assoc]
+by rw [append_assoc, append_assoc]
 
-lemma nonzeros_app (l₁ l₂ : natlist) :
+/-
+Lemma nonzeros_app : ∀l1 l2 : natlist,
+  nonzeros (l1 ++ l2) = (nonzeros l1) ++ (nonzeros l2).
+Proof.
+  (* FILL IN HERE *) Admitted.
+-/
+
+lemma nonzeros_append (l₁ l₂ : natlist) :
   nonzeros (l₁ ++ l₂) = (nonzeros l₁) ++ (nonzeros l₂) :=
 begin
-  induction l₁ with h,
+  induction l₁ with n l₁ ih,
     refl,
-  cases h; simp *,
+  cases n,
+    rw cons_append,
+    rwa [nonzeros, nonzeros],
+  rw cons_append,
+  rw [nonzeros, nonzeros],
+  rw ih,
+  rw cons_append,
 end
 
 /-
@@ -803,7 +858,6 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 def eqblist : natlist → natlist → bool
 | nil nil := tt
 | (h₁::t₁) (h₂::t₂) := if eqb h₁ h₂
@@ -813,17 +867,26 @@ def eqblist : natlist → natlist → bool
 
 example : eqblist nil nil := rfl
 
-example : eqblist ⟦1,2,3⟧ ⟦1,2,3⟧ := rfl
+example : eqblist [1, 2, 3] [1, 2, 3] := rfl
 
-example : eqblist ⟦1,2,3⟧ ⟦1,2,4⟧ = ff := rfl
+example : eqblist [1, 2, 3] [1, 2, 4] = ff := rfl
 
-@[simp]
 lemma eqb_refl (l : ℕ) : eqb l l = tt :=
-by induction l; simp *
+begin
+  induction l with h l ih,
+    refl,
+  rwa eqb,
+end
 
-/-- tt on left is real bad for simplifications -/
 theorem eqblist_refl (l : natlist) : eqblist l l = tt :=
-by induction l; simp [*, eqb_refl]
+begin
+  induction l with n l ih,
+    refl,
+  rw eqblist,
+  rw eqb_refl,
+  rw ih,
+  refl,
+end
 
 /-
 Theorem count_member_nonzero : ∀(s : bag),
@@ -832,13 +895,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-lemma zero_leb (n : nat) : 0 <=? n :=
-by induction n; simp *
-
-theorem count_member_nonzero (s : bag)
-  : 1 <=? (count 1 (1 :: s)) = tt :=
-by induction s; apply zero_leb
+theorem count_member_nonzero (s : bag) : 1 <=? (count 1 (1 :: s)) = tt :=
+begin
+  induction s with n s ih,
+    refl,
+  refl,
+end
 
 /-
 Theorem leb_n_Sn : ∀n,
@@ -851,9 +913,12 @@ Proof.
     simpl. rewrite IHn'. reflexivity. Qed.
 -/
 
-@[simp]
-theorem leb_n_Sn (n : ℕ) : n <=? succ n = tt :=
-by induction n; simp *
+theorem leb_succ (n : ℕ) : n <=? succ n = tt :=
+begin
+  induction n with n ih,
+    refl,
+  rwa leb,
+end
 
 /-
 Theorem remove_does_not_increase_count: ∀(s : bag),
@@ -862,14 +927,21 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem remove_does_not_increase_count (s : bag)
+theorem count_remove_leb_count (s : bag)
   : count 0 (remove_one 0 s) <=? count 0 s = tt :=
 begin
   induction s with h t ih,
-    simp,
+    refl,
   cases h,
-    simp,
-  /- simp is really great until it isn't -/
+    rw remove_one,
+    rw count,
+    rw [function.comp_app, function.comp_app],
+    rw filter,
+    rw eqb,
+    rw [if_pos rfl, if_pos rfl],
+    rw length,
+    rw leb_succ,
+  /- not really sure why this works -/
   exact ih,
 end
 
@@ -878,111 +950,154 @@ end
 -/
 
 /-
-i think this is bs at this point
+TODO: revisit hard way
 -/
 
-@[simp]
-lemma eq_app_nil_false
-  {h : ℕ} {t : natlist} (c : t ++ ⟦h⟧ = nil) : false :=
+lemma eq_append_nil_false
+  {h : ℕ} {t : natlist} (c : t ++ [h] = nil) : false :=
 begin
-  have : length (t ++ ⟦h⟧) = length (nil),
+  have : length (t ++ [h]) = length (nil),
     exact congr_arg length c,
-  simp at this,
+  rw length_append at this,
+  rw length at this,
+  rw length_nil at this,
   contradiction,
 end
 
-@[simp]
-lemma eq_nil_app_false
-  {h : ℕ} {t : natlist} (c : nil = t ++ ⟦h⟧) : false :=
-eq_app_nil_false (eq.symm c)
+lemma eq_nil_append_false
+  {h : ℕ} {t : natlist} (c : nil = t ++ [h]) : false :=
+eq_append_nil_false (eq.symm c)
 
 theorem snoc_injective' {h₁ h₂ : ℕ} : ∀ t₁ t₂ : natlist,
-  t₁ ++ ⟦h₁⟧ = t₂ ++ ⟦h₂⟧ → h₁ = h₂ ∧ t₁ = t₂
-| nil nil := by intro; simp * at *
-| (h₁'::t₁) nil := by simp
-| nil (h₂'::t₂) := by simp
+  t₁ ++ [h₁] = t₂ ++ [h₂] → h₁ = h₂ ∧ t₁ = t₂
+| nil nil :=
+begin
+  intro h,
+  injection h with hl hr,
+  exact ⟨hl, hr⟩,
+end
+| (h₁'::t₁) nil :=
+begin
+  intro h,
+  injection h with hl hr,
+  exfalso,
+  exact eq_append_nil_false hr,
+end
+| nil (h₂'::t₂) :=
+begin
+  intro h,
+  injection h with hl hr,
+  exfalso,
+  exact eq_nil_append_false hr,
+end
 | (h₁'::t₁) (h₂'::t₂) :=
 begin
   intro h,
-  simp at *,
+  injection h with hl hr,
   have : h₁ = h₂ ∧ t₁ = t₂,
-    exact snoc_injective' t₁ t₂ h.right,
-  exact ⟨this.left, h.left, this.right⟩,
+    exact snoc_injective' t₁ t₂ hr,
+  split,
+    rw this.left,
+  rw [hl, this.right],
 end
 
-theorem rev_injective' :
-  ∀ l₁ l₂ : natlist, rev l₁ = rev l₂ → l₁ = l₂
-| nil nil := by intro; simp
-| nil (h₂::t₂) := by simp
-| (h₁::t₁) nil := by simp
+theorem reverse_injective_hard' :
+  ∀ l₁ l₂ : natlist, reverse l₁ = reverse l₂ → l₁ = l₂
+| nil nil :=
+begin
+  intro h,
+  refl,
+end
+| nil (h₂::t₂) :=
+begin
+  intro h,
+  rw [reverse, reverse] at h,
+  exfalso,
+  exact eq_nil_append_false h,
+end
+| (h₁::t₁) nil :=
+begin
+  intro h,
+  rw [reverse, reverse] at h,
+  exfalso,
+  exact eq_append_nil_false h,
+end
 | (h₁::t₁) (h₂::t₂) :=
 begin
   simp,
   intro h,
-  have : h₁ = h₂ ∧ rev t₁ = rev t₂,
-    exact snoc_injective' (rev t₁) (rev t₂) h,
-  exact ⟨this.left, rev_injective' t₁ t₂ this.right⟩,
-end
-
-theorem snoc_injective {h₁ h₂ : ℕ} : ∀ t₁ t₂ : natlist,
-  t₁ ++ ⟦h₁⟧ = t₂ ++ ⟦h₂⟧ → h₁ = h₂ ∧ t₁ = t₂ :=
-begin
-  intro t₁,
-  induction t₁ with h₁' t₁ ih,
-    intros t₂ h,
-    cases t₂ with h₂' t₂,
-      simp * at *,
-    simp at h,
-    contradiction,
-  intro t₂,
-  cases t₂ with h₂' t₂,
-    simp,
-  intro h,
-  simp at *,
-  have : h₁ = h₂ ∧ t₁ = t₂,
-    exact ih t₂ h.right,
-  exact ⟨this.left, h.left, this.right⟩,
-end
-
-theorem rev_injective :
-  ∀ l₁ l₂ : natlist, rev l₁ = rev l₂ → l₁ = l₂ :=
-begin
-  intro l₁,
-  induction l₁ with h₁ t₁ ih,
-    intros l₂ h,
-    cases l₂ with h₂ t₂,
-      simp,
-    simp at h,
-    contradiction,
-  intro l₂,
-  cases l₂ with h₂ t₂,
-    simp,
-  intro h,
-  simp at *,
-  have : h₁ = h₂ ∧ rev t₁ = rev t₂,
-    exact snoc_injective (rev t₁) (rev t₂) h,
-  exact ⟨this.left, ih t₂ this.right⟩,
+  have : h₁ = h₂ ∧ reverse t₁ = reverse t₂,
+    exact snoc_injective' (reverse t₁) (reverse t₂) h,
+  exact ⟨this.left, reverse_injective_hard' t₁ t₂ this.right⟩,
 end
 
 /-
-lol, this is the easy way
+without computation engine
+-/
+theorem snoc_injective {h₁ h₂ : ℕ} : ∀ t₁ t₂ : natlist,
+  t₁ ++ [h₁] = t₂ ++ [h₂] → h₁ = h₂ ∧ t₁ = t₂ :=
+begin
+  intro t₁,
+  induction t₁ with h₁' t₁ ih,
+    rintro (_ | ⟨h₂', t₂⟩) h,
+      injection h with hl hr,
+      exact ⟨hl, hr⟩,
+    injection h with hl hr,
+    exfalso,
+    exact eq_nil_append_false hr,
+  rintro (_ | ⟨h₂', t₂⟩) h,
+    injection h with hl hr,
+    exfalso,
+    exact eq_append_nil_false hr,
+  injection h with hl hr,
+  have : h₁ = h₂ ∧ t₁ = t₂,
+    exact ih t₂ hr,
+  split,
+    exact this.left,
+  rw [hl, this.right],
+end
+
+theorem reverse_injective_hard :
+  ∀ l₁ l₂ : natlist, reverse l₁ = reverse l₂ → l₁ = l₂ :=
+begin
+  intro l₁,
+  induction l₁ with h₁ t₁ ih,
+    rintro (_ | ⟨h₂, t₂⟩) h,
+      refl,
+    rw [reverse, reverse] at h,
+    exfalso,
+    exact eq_nil_append_false h,
+  rintro (_ | ⟨h₂, t₂⟩) h,
+    rw [reverse, reverse] at h,
+    exfalso,
+    exact eq_append_nil_false h,
+  rw [reverse, reverse] at h,
+  have : h₁ = h₂ ∧ reverse t₁ = reverse t₂,
+    exact snoc_injective (reverse t₁) (reverse t₂) h,
+  rw this.left,
+  have, exact ih _ this.right,
+  rw this,
+end
+
+/-
+now, for the easy way
 -/
 
-theorem rev_injective''
-  (l₁ l₂ : natlist) (h : rev l₁ = rev l₂) : l₁ = l₂ :=
+theorem reverse_injective
+  (l₁ l₂ : natlist) (h : reverse l₁ = reverse l₂) : l₁ = l₂ :=
 begin
-  rw ←rev_involutive l₁,
-  rw ←rev_involutive l₂,
+  rw ←reverse_involutive l₁,
+  rw ←reverse_involutive l₂,
   rw h
 end
 
-theorem rev_injective'''
-  (l₁ l₂ : natlist) (h : rev l₁ = rev l₂) : l₁ = l₂ :=
+theorem reverse_injective'
+  (l₁ l₂ : natlist) (h : reverse l₁ = reverse l₂) : l₁ = l₂ :=
 begin
-  have : rev (rev l₁) = rev (rev l₂),
-    exact congr_arg rev h,
-  simp at this,
-  exact this
+  have : reverse (reverse l₁) = reverse (reverse l₂),
+    congr,
+    exact h,
+  rwa [reverse_involutive, reverse_involutive] at this,
 end
 
 /-
@@ -1037,11 +1152,11 @@ def nth_error : natlist → ℕ → natoption
 | (h::_) 0 := some h
 | (_::t) (n + 1) := nth_error t n
 
-example : nth_error ⟦4,5,6,7⟧ 0 = some 4 := rfl
+example : nth_error [4, 5, 6, 7] 0 = some 4 := rfl
 
-example : nth_error ⟦4,5,6,7⟧ 3 = some 7 := rfl
+example : nth_error [4, 5, 6, 7] 3 = some 7 := rfl
 
-example : nth_error ⟦4,5,6,7⟧ 9 = none := rfl
+example : nth_error [4, 5, 6, 7] 9 = none := rfl
 
 /-
 Fixpoint nth_error' (l:natlist) (n:nat) : natoption :=
@@ -1068,7 +1183,6 @@ Definition option_elim (d : nat) (o : natoption) : nat :=
   end.
 -/
 
-@[simp]
 def option_elim (d : ℕ) : natoption → ℕ
 | (some n) := n
 | _ := d
@@ -1087,16 +1201,15 @@ Example test_hd_error3 : hd_error [5;6] = Some 5.
  (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-def hd_error : natlist → natoption
+def head_error : natlist → natoption
 | nil := none
 | (h::_) := some h
 
-example : hd_error ⟦⟧ = none := rfl
+example : head_error [] = none := rfl
 
-example : hd_error ⟦1⟧ = some 1 := rfl
+example : head_error [1] = some 1 := rfl
 
-example : hd_error ⟦5,6⟧ = some 5 := rfl
+example : head_error [5, 6] = some 5 := rfl
 
 /-
 Theorem option_elim_hd : ∀(l:natlist) (default:nat),
@@ -1105,16 +1218,22 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem option_elim_hd (l : natlist) (default : ℕ)
-  : hd default l = option_elim default (hd_error l) :=
-by cases l; simp
+theorem option_elim_head (l : natlist) (default : ℕ)
+  : head default l = option_elim default (head_error l) :=
+begin
+  cases l with n l,
+    refl,
+  refl,
+end
 
 /-
 Inductive id : Type :=
   | Id (n : nat).
 -/
 
-/- a different id is already in scope -/
+/-
+TODO: investigate error with using sf casing
+-/
 inductive Id : Type
 | id (n : ℕ)
 
@@ -1127,7 +1246,6 @@ Definition eqb_id (x1 x2 : id) :=
   end.
 -/
 
-@[simp]
 def eqb_id : Id → Id → bool
 | (id n₁) (id n₂) := n₁ =? n₂
 
@@ -1137,9 +1255,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
 theorem eqb_id_refl (x : Id) : eqb_id x x = tt :=
-by cases x; simp
+begin
+  cases x,
+  apply eqb_refl,
+end
 
 /-
 Inductive partial_map : Type :=
@@ -1160,7 +1280,6 @@ Definition update (d : partial_map)
   record x value d.
 -/
 
-@[simp]
 def update (d : partial_map) (x : Id) (value : ℕ)
   : partial_map := record x value d
 
@@ -1174,7 +1293,6 @@ Fixpoint find (x : id) (d : partial_map) : natoption :=
   end.
 -/
 
-@[simp]
 def find (x : Id) : partial_map → natoption
 | empty := none
 | (record y v d) := if eqb_id x y
@@ -1190,7 +1308,13 @@ Proof.
 -/
 
 theorem update_eq (d : partial_map) (x : Id) (v : ℕ) :
-  find x (update d x v) = some v := by simp
+  find x (update d x v) = some v :=
+begin
+  rw update,
+  rw find,
+  rw eqb_id_refl,
+  refl,
+end
 
 /-
 Theorem update_neq :
@@ -1203,7 +1327,12 @@ Proof.
 theorem update_neq
   (d : partial_map) (x y : Id) (o : ℕ) (h : eqb_id x y = ff) :
   find x (update d y o) = find x d :=
-by simp *
+begin
+  rw update,
+  rw find,
+  rw h,
+  refl,
+end
 
 /-
 Inductive baz : Type :=
@@ -1211,7 +1340,7 @@ Inductive baz : Type :=
   | Baz2 (y : baz) (b : bool).
 -/
 
-/- i guess you can write it. you just can't make any -/
+/- you can write it, but can't make any -/
 inductive baz : Type
 | Baz1 (x : baz)
 | Baz2 (y : baz) (b : bool)

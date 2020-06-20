@@ -277,8 +277,6 @@ Proof.
     simpl. rewrite → IHn'. reflexivity. Qed.
 -/
 
-/- we can do better -/
-/- show / have are kind of strange -/
 theorem add_assoc'' (n m p : ℕ) : n + (m + p) = (n + m) + p :=
 begin
   induction n,
