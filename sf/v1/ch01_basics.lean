@@ -61,7 +61,7 @@ Example test_next_weekday:
 Proof. simpl. reflexivity. Qed.
 -/
 
-example : next_weekday (next_weekday saturday) = tuesday := by refl
+example : next_weekday (next_weekday saturday) = tuesday := rfl
 
 /-
 Inductive bool : Type :=
@@ -119,10 +119,10 @@ Example test_orb4: (orb true true) = true.
 Proof. simpl. reflexivity. Qed.
 -/
 
-example : bor tt ff = tt := by refl
-example : bor ff ff = ff := by refl
-example : bor ff tt = tt := by refl
-example : bor tt tt = tt := by refl
+example : bor tt ff = tt := rfl
+example : bor ff ff = ff := rfl
+example : bor ff tt = tt := rfl
+example : bor tt tt = tt := rfl
 
 /-
 Notation "x && y" := (andb x y).
@@ -134,7 +134,7 @@ Proof. simpl. reflexivity. Qed.
 local infix && := band
 local infix || := bor
 
-example : ff || ff || tt = tt := by refl
+example : ff || ff || tt = tt := rfl
 
 /-
 Definition nandb (b1:bool) (b2:bool) : bool
@@ -153,10 +153,10 @@ def bnand : bool → bool → bool
 | tt tt := ff
 | _ _ := tt
 
-example : bnand tt ff = tt := by refl
-example : bnand ff ff = tt := by refl
-example : bnand ff tt = tt := by refl
-example : bnand tt tt = ff := by refl
+example : bnand tt ff = tt := rfl
+example : bnand ff ff = tt := rfl
+example : bnand ff tt = tt := rfl
+example : bnand tt tt = ff := rfl
 
 /-
 Definition andb3 (b1:bool) (b2:bool) (b3:bool) : bool
@@ -174,10 +174,10 @@ Example test_andb34: (andb3 true true false) = false.
 def band3 (b₁ : bool) (b₂ : bool) (b₃ : bool) : bool :=
   band b₁ (band b₂ b₃)
 
-example : band3 tt tt tt = tt := by refl
-example : band3 ff tt tt = ff := by refl
-example : band3 tt ff tt = ff := by refl
-example : band3 tt tt ff = ff := by refl
+example : band3 tt tt tt = tt := rfl
+example : band3 ff tt tt = ff := rfl
+example : band3 tt ff tt = ff := rfl
+example : band3 tt tt ff = ff := rfl
 
 /-
 Check true.
@@ -346,11 +346,11 @@ Compute (minustwo 4).
 
 #check succ (succ (succ (succ zero)))
 
-def minustwo : ℕ → ℕ
+def sub_two : ℕ → ℕ
 | (succ (succ n)) := n
 | _ := zero
 
-#reduce minustwo 4
+#reduce sub_two 4
 
 /-
 Check S.
@@ -360,7 +360,7 @@ Check minustwo.
 
 #check succ
 #check pred
-#check minustwo
+#check sub_two
 
 /-
 Fixpoint evenb (n:nat) : bool :=
@@ -387,8 +387,8 @@ Proof. simpl. reflexivity. Qed.
 
 def oddb := bnot ∘ evenb
 
-example : oddb 1 = tt := by refl
-example : oddb 4 = ff := by refl
+example : oddb 1 = tt := rfl
+example : oddb 4 = ff := rfl
 
 /-
 Module NatPlayground2.
@@ -466,8 +466,8 @@ def factorial : ℕ → ℕ
 | 0 := 1
 | (n + 1) := mul (n + 1) (factorial n)
 
-example : factorial 3 = 6 := by refl
-example : factorial 5 = mul 10 12 := by refl
+example : factorial 3 = 6 := rfl
+example : factorial 5 = mul 10 12 := rfl
 
 /-
 Notation "x + y" := (plus x y)
@@ -539,9 +539,9 @@ def leb : ℕ → ℕ → bool
 | (succ n) 0 := ff
 | (succ n) (succ m) := leb n m
 
-example : leb 2 2 = tt := by refl
-example : leb 0 2 = tt := by refl
-example : leb 4 2 = ff := by refl
+example : leb 2 2 = tt := rfl
+example : leb 0 2 = tt := rfl
+example : leb 4 2 = ff := rfl
 
 /-
 Notation "x =? y" := (eqb x y) (at level 70) : nat_scope.
@@ -554,7 +554,7 @@ Proof. simpl. reflexivity. Qed.
 infix ` =? `:50 := eqb
 infix ` <=? `:50 := leb
 
-example : (4 <=? 2) = ff := by refl
+example : (4 <=? 2) = ff := rfl
 
 /-
 Definition ltb (n m : nat) : bool
@@ -579,9 +579,9 @@ def ltb : ℕ → ℕ → bool
 
 infix ` <? `:50 := ltb
 
-example : ltb 2 2 = ff := by refl
-example : ltb 2 4 = tt := by refl
-example : ltb 4 2 = ff := by refl
+example : ltb 2 2 = ff := rfl
+example : ltb 2 4 = tt := rfl
+example : ltb 4 2 = ff := rfl
 
 /-
 Theorem plus_O_n : ∀n : nat, 0 + n = n.
@@ -589,7 +589,7 @@ Proof.
   intros n. simpl. reflexivity. Qed.
 -/
 
-theorem zero_add (n : ℕ) : 0 + n = n := by rw add
+theorem zero_add (n : ℕ) : 0 + n = n := by refl
 
 /-
 Theorem plus_O_n' : ∀n : nat, 0 + n = n.
@@ -597,7 +597,7 @@ Proof.
   intros n. reflexivity. Qed.
 -/
 
-theorem zero_add' (n : ℕ) : 0 + n = n := by refl
+theorem zero_add' (n : ℕ) : 0 + n = n := rfl
 
 /-
 Theorem plus_1_l : ∀n:nat, 1 + n = S n.
@@ -608,8 +608,8 @@ Proof.
   intros n. reflexivity. Qed.
 -/
 
-theorem one_plus (n : ℕ) : 1 + n = succ n := by refl
-theorem zero_mul (n : ℕ) : 0 * n = 0 := by refl
+theorem one_plus (n : ℕ) : 1 + n = succ n := rfl
+theorem zero_mul (n : ℕ) : 0 * n = 0 := rfl
 
 /-
 Theorem plus_id_example : ∀n m:nat,
@@ -963,6 +963,6 @@ def nat_to_bin : ℕ → bin
 | 0 := Z
 | (succ n) := incr (nat_to_bin n)
 
-example : bin_to_nat (nat_to_bin 127) = 127 := by refl
+example : bin_to_nat (nat_to_bin 127) = 127 := rfl
 
 end basics

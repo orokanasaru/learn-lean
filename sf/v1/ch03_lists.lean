@@ -622,7 +622,7 @@ Proof.
 -/
 
 theorem cons_append (n : ℕ) (l₁ l₂ : natlist)
-  : (n::l₁) ++ l₂ = n::(l₁ ++ l₂) := by refl
+  : (n::l₁) ++ l₂ = n::(l₁ ++ l₂) := rfl
 
 theorem append_assoc (l₁ l₂ l₃ : natlist)
   : (l₁ ++ l₂) ++ l₃ = l₁ ++ (l₂ ++ l₃) :=
@@ -700,10 +700,10 @@ Proof.
     simpl. rewrite → IHl1'. reflexivity. Qed.
 -/
 
-theorem length_nil : length nil = 0 := by refl
+theorem length_nil : length nil = 0 := rfl
 
 theorem length_cons (n : ℕ) (l : natlist) : length (n::l) = length l + 1
-  := by refl
+  := rfl
 
 theorem length_append (l₁ l₂ : natlist)
   : length (l₁ ++ l₂) = (length l₁) + (length l₂) :=
@@ -793,8 +793,7 @@ begin
   rw append_assoc,
 end
 
-theorem reverse_involutive (l : natlist)
-  : reverse (reverse l) = l :=
+theorem reverse_involutive (l : natlist) : reverse (reverse l) = l :=
 begin
   induction l with n l ih,
     refl,
@@ -954,7 +953,7 @@ TODO: revisit hard way
 -/
 
 lemma eq_append_nil_false
-  {h : ℕ} {t : natlist} (c : t ++ [h] = nil) : false :=
+  (h : ℕ) (t : natlist) (c : t ++ [h] = nil) : false :=
 begin
   have : length (t ++ [h]) = length (nil),
     exact congr_arg length c,
@@ -965,8 +964,8 @@ begin
 end
 
 lemma eq_nil_append_false
-  {h : ℕ} {t : natlist} (c : nil = t ++ [h]) : false :=
-eq_append_nil_false (eq.symm c)
+  (h : ℕ) (t : natlist) (c : nil = t ++ [h]) : false :=
+eq_append_nil_false h t (eq.symm c)
 
 theorem snoc_injective' {h₁ h₂ : ℕ} : ∀ t₁ t₂ : natlist,
   t₁ ++ [h₁] = t₂ ++ [h₂] → h₁ = h₂ ∧ t₁ = t₂
@@ -981,14 +980,16 @@ begin
   intro h,
   injection h with hl hr,
   exfalso,
-  exact eq_append_nil_false hr,
+  apply eq_append_nil_false,
+  exact hr,
 end
 | nil (h₂'::t₂) :=
 begin
   intro h,
   injection h with hl hr,
   exfalso,
-  exact eq_nil_append_false hr,
+  apply eq_nil_append_false,
+  exact hr,
 end
 | (h₁'::t₁) (h₂'::t₂) :=
 begin
@@ -1013,14 +1014,14 @@ begin
   intro h,
   rw [reverse, reverse] at h,
   exfalso,
-  exact eq_nil_append_false h,
+  exact eq_nil_append_false _ _ h,
 end
 | (h₁::t₁) nil :=
 begin
   intro h,
   rw [reverse, reverse] at h,
   exfalso,
-  exact eq_append_nil_false h,
+  exact eq_append_nil_false _ _ h,
 end
 | (h₁::t₁) (h₂::t₂) :=
 begin
@@ -1044,11 +1045,11 @@ begin
       exact ⟨hl, hr⟩,
     injection h with hl hr,
     exfalso,
-    exact eq_nil_append_false hr,
+    exact eq_nil_append_false _ _ hr,
   rintro (_ | ⟨h₂', t₂⟩) h,
     injection h with hl hr,
     exfalso,
-    exact eq_append_nil_false hr,
+    exact eq_append_nil_false _ _ hr,
   injection h with hl hr,
   have : h₁ = h₂ ∧ t₁ = t₂,
     exact ih t₂ hr,
@@ -1066,11 +1067,11 @@ begin
       refl,
     rw [reverse, reverse] at h,
     exfalso,
-    exact eq_nil_append_false h,
+    exact eq_nil_append_false _ _ h,
   rintro (_ | ⟨h₂, t₂⟩) h,
     rw [reverse, reverse] at h,
     exfalso,
-    exact eq_append_nil_false h,
+    exact eq_append_nil_false _ _ h,
   rw [reverse, reverse] at h,
   have : h₁ = h₂ ∧ reverse t₁ = reverse t₂,
     exact snoc_injective (reverse t₁) (reverse t₂) h,

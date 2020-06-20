@@ -1,6 +1,9 @@
 import data.nat.basic
 import .ch01_basics
 
+open basics (evenb oddb sub_two leb)
+open nat (add mul)
+
 namespace poly
 
 /-
@@ -19,20 +22,19 @@ Inductive list (X:Type) : Type :=
   | cons (x : X) (l : list X).
 -/
 
-/- can not shadow list -/
-/- needing to already move to this syntax is annoying -/
-inductive lst (X: Type) : Type
-| nil : lst
-| cons (x : X) (l : lst) : lst
+/- needing to already move to gadt syntax is annoying -/
+inductive list (α : Type) : Type
+| nil : list
+| cons (a : α) (l : list) : list
 
-open lst
+open poly.list
 
 /-
 Check list.
 (* ===> list : Type -> Type *)
 -/
 
-#check lst
+#check list
 
 /-
 Check (nil nat).
@@ -76,9 +78,9 @@ Fixpoint repeat (X : Type) (x : X) (count : nat) : list X :=
   end.
 -/
 
-def repeat {X : Type} (x : X) : ℕ → lst X
+def repeat (α : Type) (a : α) : ℕ → list α
 | 0 := nil
-| (n + 1) := cons x (repeat n)
+| (n + 1) := cons a (repeat n)
 
 /-
 Example test_repeat1 :
@@ -86,7 +88,7 @@ Example test_repeat1 :
 Proof. reflexivity. Qed.
 -/
 
-example : repeat 4 2 = cons 4 (cons 4 nil) := rfl
+example : repeat ℕ 4 2 = cons 4 (cons 4 nil) := rfl
 
 /-
 Example test_repeat2 :
@@ -94,7 +96,7 @@ Example test_repeat2 :
 Proof. reflexivity. Qed.
 -/
 
-example : repeat ff 1 = cons ff nil := rfl
+example : repeat bool ff 1 = cons ff nil := rfl
 
 /-
 Inductive mumble : Type :=
@@ -108,16 +110,16 @@ Inductive grumble (X:Type) : Type :=
 -/
 
 /- i don't want to lose the ability to use a/b in prod -/
-section mumble_grumble
+namespace mumble_grumble
 
 inductive mumble : Type
 | a
 | b (x : mumble) (y : ℕ)
 | c
 
-inductive grumble (X : Type) : Type
+inductive grumble (α : Type) : Type
 | d (m : mumble) : grumble
-| e (x : X) : grumble
+| e (a : α) : grumble
 
 open mumble
 open grumble
@@ -139,15 +141,16 @@ Fixpoint repeat' X x count : list X :=
   end.
 -/
 
+def repeat' (α a) : ∀count, list α
+| 0 := nil
+| (count + 1) := cons a (repeat' count)
+
 /-
 Check repeat'.
 (* ===> forall X : Type, X -> nat -> list X *)
 Check repeat.
 (* ===> forall X : Type, X -> nat -> list X *)
 -/
-
-/- need to go back and clean up implicits before this point -/
-/- lean does not have type inference for parameters -/
 
 /-
 Fixpoint repeat'' X x count : list X :=
@@ -157,10 +160,9 @@ Fixpoint repeat'' X x count : list X :=
   end.
 -/
 
-/- if you hate yourself, i guess you can do this in lean -/
-def repeat'' {X : Type} (x : X) : ∀ n : ℕ, lst X
+def repeat'' {α} (a) : ∀count, list α
 | 0 := @nil _
-| (n + 1) := @cons _ x (@repeat _ x n)
+| (count + 1) := cons a (repeat'' count)
 
 /-
 Definition list123 :=
@@ -174,8 +176,6 @@ Definition list123' :=
   cons _ 1 (cons _ 2 (cons _ 3 (nil _))).
 -/
 
-/- again, why? -/
-
 def list123' := @cons _ 1 (@cons _ 2 (@cons _ 3 (@nil _)))
 
 /-
@@ -187,9 +187,14 @@ Definition list123'' := cons 1 (cons 2 (cons 3 nil)).
 -/
 
 /-
-doesn't appear to exist in lean
-something something metavariables
+arguments doesn't appear to exist in lean
 -/
+
+/-
+let's go one step further
+-/
+
+variables {α β γ : Type}
 
 /-
 Fixpoint repeat''' {X : Type} (x : X) (count : nat) : list X :=
@@ -199,17 +204,15 @@ Fixpoint repeat''' {X : Type} (x : X) (count : nat) : list X :=
   end.
 -/
 
-/- yeah, that how i defined it originally -/
-
 /-
 Inductive list' {X:Type} : Type :=
   | nil'
   | cons' (x : X) (l : list').
 -/
 
-inductive list' {X : Type} : Type
+inductive list' : Type
 | nil' : list'
-| cons' : X → list'
+| cons' : α → list'
 
 /-
 Fixpoint app {X : Type} (l1 l2 : list X)
@@ -243,33 +246,34 @@ Example test_length1: length (cons 1 (cons 2 (cons 3 nil))) = 3.
 Proof. reflexivity. Qed.
 -/
 
-@[simp]
-def app {α : Type} : lst α → lst α → lst α
+/-
+to add something beyond polymorphism to this chapter,
+let's also use generalized field notation
+-/
+def list.append : list α → list α → list α
 | nil l₂ := l₂
-| (cons h t) l₂ := cons h (app t l₂)
+| (cons h t) l₂ := cons h (t.append l₂)
 
-@[simp]
-def rev {α : Type} : lst α → lst α
+def list.reverse : list α → list α
 | nil := nil
-| (cons h t) := app (rev t) (cons h nil)
+| (cons h t) := t.reverse.append (cons h nil)
 
-@[simp]
-def length {α : Type} : lst α → ℕ
+def list.length : list α → ℕ
 | nil := 0
-| (cons _ t) := length t + 1
+| (cons _ t) := t.length + 1
 
 example :
-  rev (cons 1 (cons 2 nil)) = cons 2 (cons 1 nil) := rfl
+  (cons 1 (cons 2 nil)).reverse = cons 2 (cons 1 nil) := rfl
 
-example : rev (cons tt nil) = cons tt nil := rfl
+example : (cons tt nil).reverse = cons tt nil := rfl
 
-example : length (cons 1 (cons 2 (cons 3 nil))) = 3 := rfl
+example : (cons 1 (cons 2 (cons 3 nil))).length = 3 := rfl
 
 /-
 Definition mynil : list nat := nil.
 -/
 
-def mynil : lst ℕ := nil
+def mynil : list ℕ := nil
 
 /-
 Check @nil.
@@ -288,9 +292,9 @@ Notation "x ++ y" := (app x y)
                      (at level 60, right associativity).
 -/
 
-infixr ` :: ` := cons
-notation `⟦` l:(foldr `, ` (h t, cons h t) nil `⟧`) := l
-infixr ` ++ ` := app
+local infixr :: := cons
+local notation `[` l:(foldr `, ` (h t, cons h t) nil `]`) := l
+local infixr ++ := list.append
 
 /-
 Theorem app_nil_r : ∀(X:Type), ∀l:list X,
@@ -309,39 +313,79 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem app_nil_r {α : Type} (l : lst α) :
-  l ++ ⟦⟧ = l := by induction l; simp *
+theorem cons_append (a : α) (l₁ l₂) : (a::l₁) ++ l₂ = a::(l₁ ++ l₂) := rfl
 
-theorem app_assoc {α : Type} (l m n : lst α) :
-  l ++ (m ++ n) = (l ++ m) ++ n := by induction l; simp *
+theorem append_nil (l : list α) : l ++ [] = l :=
+begin
+  induction l with a l ih,
+    refl,
+  rw cons_append,
+  rw ih,
+end
 
-/- want this later. don't want lst stuff -/
+theorem nil_append (l : list α) : [] ++ l = l := rfl
 
-@[simp]
-lemma app_length {α : Type} (l₁ l₂ : list α) :
-  list.length (l₁ ++ l₂) = list.length l₁ + list.length l₂ :=
-by induction l₁; simp [*, add_assoc, add_comm 1]
+theorem append_assoc (l m n : list α) : l ++ (m ++ n) = (l ++ m) ++ n :=
+begin
+  induction l with a l ih,
+    refl,
+  rw [cons_append, cons_append, cons_append],
+  rw ih,
+end
+
+theorem length_nil : (@nil α).length = 0 := rfl
+
+theorem length_cons (a : α) (l) : (a::l).length = l.length + 1 := rfl
+
+lemma length_append (l₁ l₂ : list α) :
+  (l₁ ++ l₂).length = l₁.length + l₂.length :=
+begin
+  induction l₁ with n l ih,
+    rw nil_append,
+    rw length_nil,
+    rw zero_add,
+  rw cons_append,
+  rw [length_cons, length_cons],
+  rw ih,
+  rw [add_assoc _ 1, add_comm 1, add_assoc],
+end
 
 /-
 Theorem rev_app_distr: ∀X (l1 l2 : list X),
   rev (l1 ++ l2) = rev l2 ++ rev l1.
 Proof.
   (* FILL IN HERE *) Admitted.
+
 Theorem rev_involutive : ∀X : Type, ∀l : list X,
   rev (rev l) = l.
 Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem rev_app_distr {α : Type} (l₁ l₂ : lst α) :
-  rev (l₁ ++ l₂) = rev l₂ ++ rev l₁ :=
-by induction l₁; simp [*, app_assoc]
+open poly.list (reverse)
 
-@[simp]
-theorem rev_involutive {α : Type} (l : lst α) :
-  rev (rev l) = l := by induction l; simp *
+theorem reverse_append (l₁ l₂ : list α) :
+  (l₁ ++ l₂).reverse = l₂.reverse ++ l₁.reverse :=
+begin
+  induction l₁ with a l₁ ih,
+    rw nil_append,
+    rw reverse,
+    rw append_nil,
+  rw cons_append,
+  rw [reverse, reverse],
+  rw ih,
+  rw append_assoc,
+end
+
+theorem reverse_involutive (l : list α) : reverse (reverse l) = l :=
+begin
+  induction l with n l ih,
+    refl,
+  rw reverse,
+  rw reverse_append,
+  rw ih,
+  refl,
+end
 
 /-
 Inductive prod (X Y : Type) : Type :=
@@ -349,11 +393,10 @@ Inductive prod (X Y : Type) : Type :=
 Arguments pair {X} {Y} _ _.
 -/
 
-/- also reserved -/
-inductive prod' (α β : Type) : Type
-| pair (a : α) (b : β) : prod'
+/- something else new -/
+structure prod (α β : Type) : Type := (fst : α) (snd : β)
 
-open prod'
+open poly.prod
 
 /-
 Notation "( x , y )" := (pair x y).
@@ -361,10 +404,11 @@ Notation "( x , y )" := (pair x y).
 
 /-
 this is going to break (update : yep, {} break typeclass stuff)
+local should be fine though
 i don't see anything like coq's scope in lean
 -/
-notation `⦃` x , y `⦄` := pair x y
-infix ` * ` := prod'
+local notation {x, y} := prod.mk x y
+local infix × := prod
 
 /-
 Definition fst {X Y : Type} (p : X * Y) : X :=
@@ -378,13 +422,8 @@ Definition snd {X Y : Type} (p : X * Y) : Y :=
   end.
 -/
 
-@[simp]
-def fst {α β : Type} : α * β → α
-| ⦃a, _⦄ := a
-
-@[simp]
-def snd {α β : Type} : α * β → β
-| ⦃_, b⦄ := b
+#check fst
+#check snd
 
 /-
 Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
@@ -396,18 +435,17 @@ Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
   end.
 -/
 
-@[simp]
-def combine {α β : Type} : lst α → lst β → lst (α * β)
-| ⟦⟧ _ := ⟦⟧
-| _ ⟦⟧ := ⟦⟧
-| (a::ta) (b::tb) := ⦃a, b⦄ :: combine ta tb
+def combine : list α → list β → list (α × β)
+| [] _ := []
+| _ [] := []
+| (a::ta) (b::tb) := {a, b}::combine ta tb
 
 /-
 Compute (combine [1;2] [false;false;true;true]).
 -/
 
 #check @combine
-#reduce combine ⟦1,2⟧ ⟦ff,ff,tt,tt⟧
+#reduce combine [1, 2] [ff, ff, tt, tt]
 
 /-
 Fixpoint split {X Y : Type} (l : list (X*Y))
@@ -422,20 +460,19 @@ Proof.
 
 /- lean caches so this won't be exponential -/
 /- unfortunately lean seems incapable of unfolding this -/
-def split' {α β : Type} : lst (α * β) → lst α * lst β
-| ⟦⟧ := ⦃⟦⟧, ⟦⟧⦄
-| (⦃a, b⦄::l) := ⦃a::fst (split' l), b::snd (split' l)⦄
+def split' : list (α × β) → list α × list β
+| [] := {[], []}
+| ({a, b}::l) := {a::(split' l).fst, b::(split' l).snd}
 
 /- can also uses explicit induction to clearly be linear -/
-@[simp]
-def split {α β : Type} (l : lst (α * β)) : lst α * lst β :=
+def split (l : list (α × β)) : list α × list β :=
 begin
   induction l with h t ih,
-    exact ⦃⟦⟧, ⟦⟧⦄,
-  exact ⦃fst h::fst ih, snd h::snd ih⦄
+    exact {[], []},
+  exact {h.fst::ih.fst, h.snd::ih.snd},
 end
 
-example : split ⟦⦃1,ff⦄, ⦃2,ff⦄⟧ = ⦃⟦1,2⟧, ⟦ff,ff⟧⦄ := rfl
+example : split [{1, ff}, {2, ff}] = {[1, 2], [ff, ff]} := rfl
 
 /-
 Module OptionPlayground.
@@ -449,13 +486,11 @@ Arguments None {X}.
 End OptionPlayground.
 -/
 
-section option_playground
+inductive option (α : Type) : Type
+| none : option
+| some (a : α) : option
 
-inductive opt (α : Type) : Type
-| some (a : α) : opt
-| none : opt
-
-end option_playground
+open poly.option
 
 /-
 Fixpoint nth_error {X : Type} (l : list X) (n : nat)
@@ -473,9 +508,7 @@ Example test_nth_error3 : nth_error [true] 2 = None.
 
 -/
 
-/- using real list again -/
-
-def nth_error {α : Type} : list α → ℕ → option α
+def nth_error : list α → ℕ → option α
 | [] _ := none
 | (h::_) 0 := some h
 | (_::t) (n + 1) := nth_error t n
@@ -491,9 +524,9 @@ Definition hd_error {X : Type} (l : list X) : option X
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-def hd_error {α : Type} : list α → option α
+def hd_error : list α → option α
 | [] := none
-| (h::_) := h
+| (h::_) := some h
 
 /-
 Check @hd_error.
@@ -509,7 +542,7 @@ Example test_hd_error2 : hd_error [[1];[2]] = Some [1].
 
 example : hd_error [1,2] = some 1 := rfl
 
-example : hd_error [[1],[2]] = some [1] := rfl
+example : hd_error [[1], [2]] = some [1] := rfl
 
 /-
 Definition doit3times {X:Type} (f:X→X) (n:X) : X :=
@@ -532,9 +565,9 @@ Proof. reflexivity. Qed.
 
 #check @doit3times
 
-example : doit3times minustwo 9 = 3 := rfl
+example : doit3times sub_two 9 = 3 := rfl
 
-example : doit3times negb tt = ff := rfl
+example : doit3times bnot tt = ff := rfl
 
 /-
 Fixpoint filter {X:Type} (test: X→bool) (l:list X)
@@ -546,11 +579,10 @@ Fixpoint filter {X:Type} (test: X→bool) (l:list X)
   end.
 -/
 
-@[simp]
-def filter {α : Type} (test : α → bool)
+def list.filter {α : Type} (test : α → bool)
   : list α → list α
 | [] := []
-| (h::t) := if test h then h :: filter t else filter t
+| (h::t) := if test h then h::t.filter else t.filter
 
 /-
 Example test_filter1: filter evenb [1;2;3;4] = [2;4].
@@ -566,13 +598,12 @@ Example test_filter2:
 Proof. reflexivity. Qed.
 -/
 
-example : filter evenb [1,2,3,4] = [2,4] := rfl
+example : [1, 2, 3, 4].filter evenb = [2,4] := rfl
 
 def length_is_1 {α : Type} (l : list α) : bool :=
   list.length l =? 1
 
-example : filter length_is_1
-  [[1,2], [3], [4], [5,6,7], [], [8]]
+example : [[1, 2], [3], [4], [5, 6, 7], [], [8]].filter length_is_1
   = [[3], [4], [8]] := rfl
 
 /-
@@ -589,14 +620,15 @@ Example test_countoddmembers'3: countoddmembers' nil = 0.
 Proof. reflexivity. Qed.
 -/
 
-/- pretty sure this is how i did it anyway -/
-def countoddmembers := list.length ∘ (filter oddb)
+open poly.list (filter length)
 
-example : countoddmembers [1,0,3,1,4,5] = 4 := rfl
+def countoddmembers := length ∘ (filter oddb)
+
+example : countoddmembers [1, 0, 3, 1, 4, 5] = 4 := rfl
 
 example : countoddmembers [0,2,4] = 0 := rfl
 
-example : countoddmembers list.nil = 0 := rfl
+example : countoddmembers [] = 0 := rfl
 
 /-
 Example test_anon_fun':
@@ -615,8 +647,8 @@ Example test_filter2':
 Proof. reflexivity. Qed.
 -/
 
-example : filter (λ l, list.length l =? 1)
-  [[1,2], [3], [4], [5,6,7], [], [8]]
+example :
+  [[1, 2], [3], [4], [5, 6, 7], [], [8]].filter (λ l, l.length =? 1)
   = [[3], [4], [8]] := rfl
 
 /-
@@ -635,9 +667,9 @@ Example test_filter_even_gt7_2 :
 def filter_even_gt₇ := filter (λ n, evenb n && leb 7 n)
 
 example :
-  filter_even_gt₇ [1,2,6,9,10,3,12,8] = [10,12,8] := rfl
+  filter_even_gt₇ [1, 2, 6, 9, 10, 3, 12, 8] = [10, 12, 8] := rfl
 
-example : filter_even_gt₇ [5,2,6,19,129] = [] := rfl
+example : filter_even_gt₇ [5, 2, 6, 19, 129] = [] := rfl
 
 /-
 Definition partition {X : Type}
@@ -654,18 +686,18 @@ Example test_partition2: partition (fun x ⇒ false) [5;9;0] = ([], [5;9;0]).
 -/
 
 /- reminder: the translation will be linear -/
-def partition {α : Type} (test : α → bool)
-  : list α → list α × list α
-| [] := ([], [])
+
+def list.partition (test : α → bool) : list α → list α × list α
+| [] := {[], []}
 | (h::t) := if test h
-            then (h::(partition t).fst, (partition t).snd)
-            else ((partition t).fst, h::(partition t).snd)
+            then {h::t.partition.fst, t.partition.snd}
+            else {t.partition.fst, h::t.partition.snd}
 
 example :
-  partition oddb [1,2,3,4,5] = ([1,3,5], [2,4]) := rfl
+  [1,2,3,4,5].partition oddb = {[1, 3, 5], [2, 4]} := rfl
 
 example :
-  partition (λ _, ff) [5,9,0] = ([], [5,9,0]) := rfl
+  [5,9,0].partition (λ _, ff) = {[], [5, 9, 0]} := rfl
 
 /-
 Fixpoint map {X Y: Type} (f:X→Y) (l:list X) : (list Y) :=
@@ -675,22 +707,16 @@ Fixpoint map {X Y: Type} (f:X→Y) (l:list X) : (list Y) :=
   end.
 -/
 
-/-
-using lst again as that's how rev is defined
-induction on list.reverse is more difficult
--/
-
-@[simp]
-def map {α β : Type} (f : α → β) : lst α → lst β
-| ⟦⟧ := ⟦⟧
-| (h::t) := f h :: map t
+def list.map (f : α → β) : list α → list β
+| [] := []
+| (h::t) := f h :: t.map
 
 /-
 Example test_map1: map (fun x ⇒ plus 3 x) [2;0;2] = [5;3;5].
 Proof. reflexivity. Qed.
 -/
 
-example : map (λ x, 3 + x) ⟦2,0,2⟧ = ⟦5,3,5⟧ := rfl
+example : [2, 0, 2].map (λx, 3 + x) = [5, 3, 5] := rfl
 
 /-
 Example test_map2:
@@ -698,7 +724,7 @@ Example test_map2:
 Proof. reflexivity. Qed.
 -/
 
-example : map oddb ⟦2,1,2,5⟧ = ⟦ff,tt,ff,tt⟧ := rfl
+example : [2, 1, 2, 5].map oddb = [ff, tt, ff, tt] := rfl
 
 /-
 Example test_map3:
@@ -707,8 +733,8 @@ Example test_map3:
 Proof. reflexivity. Qed.
 -/
 
-example : map (λ n, [evenb n, oddb n]) ⟦2,1,2,5⟧
-  = ⟦[tt,ff], [ff,tt], [tt,ff], [ff,tt]⟧ := rfl
+example : [2, 1, 2, 5].map (λn, [evenb n, oddb n])
+  = [[tt, ff], [ff, tt], [tt, ff], [ff, tt]] := rfl
 
 /-
 Theorem map_rev : ∀(X Y : Type) (f : X → Y) (l : list X),
@@ -717,15 +743,30 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma map_assoc
-  {α β : Type} (f : α → β)
-  (l₁ l₂ : lst α) :
-  map f (l₁ ++ l₂) = map f l₁ ++ map f l₂ :=
-by induction l₁; simp *
+open poly.list (map)
 
-def map_rev {α β : Type} (f : α → β) (l : lst α) :
-  map f (rev l) = rev (map f l) :=
-by induction l; simp [*, map_assoc]
+lemma map_append (f : α → β) (l₁ l₂ : list α) :
+  (l₁ ++ l₂).map f = l₁.map f ++ l₂.map f :=
+begin
+  induction l₁ with a l₁ ih,
+    refl,
+  rw cons_append,
+  rw [map, map],
+  rw ih,
+  rw cons_append,
+end
+
+def map_reverse (f : α → β) (l : list α) :
+  l.reverse.map f = (l.map f).reverse :=
+begin
+  induction l with a l ih,
+    refl,
+  rw map,
+  rw [reverse, reverse],
+  rw map_append,
+  rw ih,
+  refl,
+end
 
 /-
 Fixpoint flat_map {X Y: Type} (f: X → list Y) (l: list X)
@@ -738,13 +779,13 @@ Example test_flat_map1:
  (* FILL IN HERE *) Admitted.
 -/
 
-def flat_map {α β : Type} (f : α → list β) :
-  list α → list β
-| [] := []
-| (h::t) := f h ++ flat_map t
+/- i don't love the order that lean uses -/
+def list.bind : list α → (α → list β) → list β
+| [] f := []
+| (h::t) f := f h ++ t.bind f
 
-example : flat_map (λ n, [n,n,n]) [1,5,4]
-  = [1,1,1,5,5,5,4,4,4] := rfl
+example : [1, 5, 4].bind (λn, [n, n, n])
+  = [1, 1, 1, 5, 5, 5, 4, 4, 4] := rfl
 
 /-
 Definition option_map {X Y : Type} (f : X → Y) (xo : option X)
@@ -755,10 +796,9 @@ Definition option_map {X Y : Type} (f : X → Y) (xo : option X)
   end.
 -/
 
-def option_map {α β : Type} (f : α → β)
-  : option α → option β
-| none := none
-| (some a) := some (f a)
+def option.bind : option α → (α → β) → option β
+| none f := none
+| (some a) f := some (f a)
 
 /-
 Fixpoint fold {X Y: Type} (f: X→Y→Y) (l: list X) (b: Y)
@@ -769,16 +809,13 @@ Fixpoint fold {X Y: Type} (f: X→Y→Y) (l: list X) (b: Y)
   end.
 -/
 
-@[simp]
-def fold {α β : Type} (f: α → β → β) :
-  lst α → β → β
-| ⟦⟧ b := b
-| (h::t) b := f h (fold t b)
+def list.foldr (f: α → β → β) (b : β) : list α → β
+| [] := b
+| (a::t) := f a t.foldr
 
-def fold' {α β : Type} (f: α → β → β) :
-  lst α → β → β
-| ⟦⟧ b := b
-| (h::t) b := fold' t (f h b)
+def list.foldl (f: α → β → α) : α → list β → α
+| a [] := a
+| a (b::t) := t.foldl (f a b)
 
 /-
 Check (fold andb).
@@ -794,15 +831,19 @@ Example fold_example3 :
   fold app [[1];[];[2;3];[4]] [] = [1;2;3;4].
 -/
 
-#check fold andb
+open poly.list (foldr)
 
-open NatPlayground2
+#check foldr band
 
-example : fold mult ⟦1,2,3,4⟧ 1 = 24 := rfl
+example : [1, 2, 3, 4].foldr mul 1 = 24 := rfl
 
-example : fold andb ⟦tt,tt,ff,tt⟧ tt = ff := rfl
+example : [tt, tt, ff, tt].foldr band tt = ff := rfl
 
-example : fold app ⟦⟦1⟧, ⟦⟧, ⟦2,3⟧, ⟦4⟧⟧ ⟦⟧ = ⟦1,2,3,4⟧ := rfl
+/-
+why is this ambiguous?
+type class resolution fails if using has_append.append
+-/
+example : [[1], [], [2, 3], [4]].foldr list.append [] = [1, 2, 3, 4] := rfl
 
 /-
 Definition constfun {X: Type} (x: X) : nat→X :=
@@ -816,7 +857,7 @@ Proof. reflexivity. Qed.
 Example constfun_example2 : (constfun 5) 99 = 5.
 -/
 
-def constfun {α : Type} (a: α) : ℕ → α := λ _, a
+def constfun (a: α) : ℕ → α := λ_, a
 
 def ftrue := constfun tt
 
@@ -829,7 +870,7 @@ Check plus.
 (* ==> nat -> nat -> nat *)
 -/
 
-#check plus
+#check add
 
 /-
 Definition plus3 := plus 3.
@@ -845,13 +886,13 @@ Example test_plus3'' : doit3times (plus 3) 0 = 9.
 Proof. reflexivity. Qed.
 -/
 
-def plus₃ := plus 3
+def add₃ := add 3
 
-example : plus₃ 4 = 7 := rfl
+example : add₃ 4 = 7 := rfl
 
-example : doit3times plus₃ 0 = 9 := rfl
+example : doit3times add₃ 0 = 9 := rfl
 
-example : doit3times (plus 3) 0 = 9 := rfl
+example : doit3times (add 3) 0 = 9 := rfl
 
 /-
 Definition fold_length {X : Type} (l : list X) : nat :=
@@ -859,11 +900,9 @@ Definition fold_length {X : Type} (l : list X) : nat :=
 Example test_fold_length1 : fold_length [4;7;0] = 3.
 -/
 
-@[simp]
-def fold_length {α : Type} (l : lst α) : ℕ :=
-  fold (λ _ n, n + 1) l 0
+def fold_length (l : list α) : ℕ := l.foldr (λ_ n, n + 1) 0
 
-example : fold_length ⟦4,7,0⟧ = 3 := rfl
+example : fold_length [4, 7, 0] = 3 := rfl
 
 /-
 Theorem fold_length_correct : ∀X (l : list X),
@@ -872,13 +911,14 @@ Proof.
 (* FILL IN HERE *) Admitted.
 -/
 
-theorem fold_length_correct {α : Type} (l : lst α) :
-  fold_length l = length l :=
+theorem fold_length_correct (l : list α) : fold_length l = l.length :=
 begin
-  induction l with h t ih,
-    simp,
-  simp,
-  exact ih,
+  induction l with a l ih,
+    refl,
+  rw length,
+  rw fold_length at ih ⊢,
+  rw foldr,
+  rw ih,
 end
 
 /-
@@ -886,18 +926,17 @@ Definition fold_map {X Y: Type} (f: X → Y) (l: list X) : list Y
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-@[simp]
-def fold_map {α β} (f : α → β) (l : lst α) : lst β :=
-  fold (λ h b, f h :: b) l ⟦⟧
+def fold_map (f : α → β) (l : list α) : list β :=
+  l.foldr (λ h b, f h :: b) []
 
-theorem fold_map_correct
-  {α β : Type} (f : α → β) (l : lst α) :
-  fold_map f l = map f l :=
+theorem fold_map_correct (f : α → β) (l : list α) :
+  fold_map f l = l.map f :=
 begin
   induction l with h t ih,
-    simp,
-  simp,
-  show fold_map f t = map f t,
+    refl,
+  rw map,
+  rw fold_map at ih ⊢,
+  rw foldr,
   rw ih,
 end
 
@@ -906,9 +945,7 @@ Definition prod_curry {X Y Z : Type}
   (f : X * Y → Z) (x : X) (y : Y) : Z := f (x, y).
 -/
 
-@[simp]
-def prod_curry {α β γ : Type}
-  (f : α × β → γ) (a : α) (b : β) : γ := f (a, b)
+def function.curry (f : α × β → γ) (a : α) (b : β) : γ := f {a, b}
 
 /-
 Definition prod_uncurry {X Y Z : Type}
@@ -916,16 +953,14 @@ Definition prod_uncurry {X Y Z : Type}
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-@[simp]
-def prod_uncurry {α β γ : Type}
-  (f : α → β → γ) (p : α × β) : γ := f p.fst p.snd
+def function.uncurry (f : α → β → γ) (p : α × β) : γ := f p.fst p.snd
 
 /-
 Example test_map1': map (plus 3) [2;0;2] = [5;3;5].
 Proof. reflexivity. Qed.
 -/
 
-example : map (plus 3) ⟦2,0,2⟧ = ⟦5,3,5⟧ := rfl
+example : [2, 0, 2].map (add 3) = [5, 3, 5] := rfl
 
 /-
 Check @prod_curry.
@@ -945,43 +980,47 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-#check @prod_curry
-#check @prod_uncurry
+open poly.function
 
-theorem uncurry_curry
-  {α β γ : Type} (f : α → β → γ) (a : α) (b : β) :
-  prod_curry (prod_uncurry f) a b = f a b := rfl
+#check @curry
+#check @uncurry
 
-theorem curry_uncurry
-  {α β γ : Type} (f : α × β → γ) (p : α × β) :
-  prod_uncurry (prod_curry f) p = f p := by simp
+theorem uncurry_curry (f : α → β → γ) (a : α) (b : β) :
+  curry (uncurry f) a b = f a b := rfl
+
+theorem curry_uncurry (f : α × β → γ) (p : α × β) :
+  uncurry (curry f) p = f p :=
+begin
+  cases p with a b,
+  refl,
+end
 
 /-
 Definition cnat := ∀X : Type, (X → X) → X → X.
 -/
 
-def cnat := ∀ α : Type, (α → α) → α → α
+def cnat := ∀α : Type, (α → α) → α → α
 
 /-
 Definition one : cnat :=
   fun (X : Type) (f : X → X) (x : X) ⇒ f x.
 -/
 
-def one : cnat := λ _ f, f
+def one : cnat := λ_ f, f
 
 /-
 Definition two : cnat :=
   fun (X : Type) (f : X → X) (x : X) ⇒ f (f x).
 -/
 
-def two : cnat := λ _ f, f ∘ f
+def two : cnat := λ_ f, f ∘ f
 
 /-
 Definition zero : cnat :=
   fun (X : Type) (f : X → X) (x : X) ⇒ x.
 -/
 
-def zero : cnat := λ _ f x, x
+def zero : cnat := λ_ f x, x
 
 /-
 Definition three : cnat := @doit3times.
@@ -1004,7 +1043,7 @@ Proof. (* FILL IN HERE *) Admitted.
 -/
 
 def succ (n : cnat) : cnat :=
-  λ α f x, f (n α f x)
+  λα f x, f (n α f x)
 
 example : succ zero = one := rfl
 
@@ -1028,7 +1067,7 @@ Proof. (* FILL IN HERE *) Admitted.
 -/
 
 def plus (m n : cnat) : cnat :=
-  λ α f x, m α f (n α f x)
+  λα f x, m α f (n α f x)
 
 example : plus zero one = one := rfl
 
@@ -1052,7 +1091,7 @@ Proof. (* FILL IN HERE *) Admitted.
 -/
 
 def mult (m n : cnat) : cnat :=
-  λ α f x, m α (n α f) x
+  λα f x, m α (n α f) x
 
 example : mult one one = one := rfl
 
@@ -1081,7 +1120,7 @@ giving up and reading the wiki article
 using untyped lambda calculus
 -/
 def ex (m n : cnat) : cnat :=
-  λ α f x, n (α → α) (m α) f x
+  λα f x, n (α → α) (m α) f x
 
 example : ex two two = plus two two := rfl
 
