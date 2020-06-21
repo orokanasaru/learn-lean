@@ -869,7 +869,10 @@ theorem band_true_elim2 (b c : bool) (h : band b c = tt)
   : c = tt :=
 begin
   cases c,
-    rwa [band_commutative, band] at h,
+    rw ←h,
+    cases b,
+      refl,
+    refl,
   refl,
 end
 
@@ -919,11 +922,21 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem band_eq_bor (b c : bool) (h : band b c = bor b c) : b = c :=
+/-
+this is so much worse wihout at
+TODO: revisit idea of intro in the type def
+-/
+theorem band_eq_bor (b c : bool) : band b c = bor b c → b = c :=
 begin
   cases b,
-    rwa [band, bor] at h,
-  rw [band, bor] at h,
+    cases c,
+      intro h,
+      refl,
+    rw [band, bor],
+    intro h,
+    rw h,
+  rw [band, bor],
+  intro h,
   rw h,
 end
 

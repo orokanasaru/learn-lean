@@ -949,7 +949,7 @@ end
 -/
 
 /-
-TODO: revisit hard way
+TODO: revisit hard way as these tactics shouldn't be known yet
 -/
 
 lemma eq_append_nil_false
@@ -980,16 +980,14 @@ begin
   intro h,
   injection h with hl hr,
   exfalso,
-  apply eq_append_nil_false,
-  exact hr,
+  exact eq_append_nil_false _ _ hr,
 end
 | nil (h₂'::t₂) :=
 begin
   intro h,
   injection h with hl hr,
   exfalso,
-  apply eq_nil_append_false,
-  exact hr,
+  exact eq_nil_append_false _ _ hr,
 end
 | (h₁'::t₁) (h₂'::t₂) :=
 begin
@@ -1089,16 +1087,7 @@ theorem reverse_injective
 begin
   rw ←reverse_involutive l₁,
   rw ←reverse_involutive l₂,
-  rw h
-end
-
-theorem reverse_injective'
-  (l₁ l₂ : natlist) (h : reverse l₁ = reverse l₂) : l₁ = l₂ :=
-begin
-  have : reverse (reverse l₁) = reverse (reverse l₂),
-    congr,
-    exact h,
-  rwa [reverse_involutive, reverse_involutive] at this,
+  rw h,
 end
 
 /-
@@ -1123,7 +1112,6 @@ Inductive natoption : Type :=
   | None.
 -/
 
-/- we're going to have a bad time -/
 inductive natoption : Type
 | some (n : ℕ)
 | none
@@ -1259,7 +1247,8 @@ Proof.
 theorem eqb_id_refl (x : Id) : eqb_id x x = tt :=
 begin
   cases x,
-  apply eqb_refl,
+  rw eqb_id,
+  rw eqb_refl,
 end
 
 /-

@@ -437,7 +437,7 @@ Fixpoint combine {X Y : Type} (lx : list X) (ly : list Y)
 
 def combine : list α → list β → list (α × β)
 | [] _ := []
-| _ [] := []
+| (a::ta) [] := []
 | (a::ta) (b::tb) := {a, b}::combine ta tb
 
 /-

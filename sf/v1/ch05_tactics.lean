@@ -3,6 +3,22 @@ import .ch02_induction
 import .ch03_lists
 import .ch04_poly
 
+open basics (evenb oddb sub_two eqb)
+open induction (double)
+open lists (eqb_id)
+open poly (split combine)
+open poly.list (length filter)
+open nat (
+  succ add_one add_succ succ_add le_of_succ_le_succ succ_le_succ
+  decidable_le
+)
+
+namespace tactics
+
+variables {α β γ : Type}
+variables (b : bool)
+variables (n m o p : ℕ)
+
 /-
 Theorem silly1 : ∀(n m o p : nat),
      n = m →
@@ -14,13 +30,11 @@ Proof.
   apply eq2. Qed.
 -/
 
-theorem silly1
-  (n m o p : ℕ)
-  (eq1 : n = m)
-  (eq2 : [n, o] = [n, p]) : [n, o] = [m, p] :=
+theorem silly₁ (eq₁ : n = m) (eq₂ : [n, o] = [n, p])
+  : [n, o] = [m, p] :=
 begin
-  rw ←eq1,
-  exact eq2
+  rw ←eq₁,
+  apply eq₂,
 end
 
 /-
@@ -33,13 +47,13 @@ Proof.
   apply eq2. apply eq1. Qed.
 -/
 
-theorem silly2
-  (n m o p : ℕ)
-  (eq1 : n = m)
-  (eq2 : ∀ q r : ℕ, q = r → [q, o] = [r, p]) : [n, o] = [m, p] :=
+theorem silly₂
+  (eq₁ : n = m)
+  (eq₂ : ∀ q r : ℕ, q = r → [q, o] = [r, p])
+  : [n, o] = [m, p] :=
 begin
-  apply eq2,
-  exact eq1
+  apply eq₂,
+  apply eq₁,
 end
 
 /-
@@ -52,13 +66,12 @@ Proof.
   apply eq2. apply eq1. Qed.
 -/
 
-theorem silly2a
-  (n m : ℕ)
-  (eq1 : (n, n) = (m, m))
-  (eq2 : ∀ q r : ℕ, (q, q) = (r, r) → [q] = [r]) : [n] = [m] :=
+theorem silly₂a
+  (eq₁ : (n, n) = (m, m))
+  (eq₂ : ∀ q r : ℕ, (q, q) = (r, r) → [q] = [r]) : [n] = [m] :=
 begin
-  apply eq2,
-  exact eq1
+  apply eq₂,
+  apply eq₁,
 end
 
 /-
@@ -70,15 +83,10 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-open nat
-
-/-
-  i have literally no idea why this works,
-  or if this would work in the coq version
--/
 theorem silly_ex
-  (h : ∀ n, evenb n = tt → oddb (succ n) = tt)
-  (v : oddb 3 = tt) : evenb 4 = tt := by apply v
+  (h : evenb n = tt → oddb n.succ = tt)
+  (v : oddb 3 = tt)
+  : evenb 4 = tt := rfl
 
 /-
 Theorem silly3_firsttry : ∀(n : nat),
@@ -91,11 +99,11 @@ Proof.
   apply H. Qed.
 -/
 
-theorem silly3_firsttry (n : ℕ) (h: tt = (n =? 5)) :
-  succ (succ n) =? 7 = tt :=
+theorem silly₃_firsttry (h: tt = (n =? 5)) :
+  n.succ.succ =? 7 = tt :=
 begin
   symmetry,
-  apply h
+  apply h,
 end
 
 /-
@@ -110,14 +118,18 @@ Proof.
   also, lean doesn't appear to have any relevant lemmas
 -/
 
-open poly
-
-@[simp]
-lemma rev_twice (l : lst ℕ) : rev (rev l) = l :=
-by induction l; simp *
-
-theorem rev_exercise1 (l l' : lst ℕ) (h: l = rev l') :
-  l' = rev l := by simp [*, rev_twice]
+/-
+using poly.list as we already proved the relevant lemma,
+and doing this with the library version is unpleasant,
+and unnecessary given the goal of this exercise
+-/
+theorem rev_exercise₁ (l l' : poly.list ℕ) (h: l = l'.reverse)
+  : l' = l.reverse :=
+begin
+  rw h,
+  symmetry,
+  apply poly.reverse_involutive,
+end
 
 /-
 Example trans_eq_example : ∀(a b c d e f : nat),
@@ -132,10 +144,11 @@ Proof.
 example
   (a b c d e f : ℕ)
   (eq1 : [a, b] = [c, d])
-  (eq2 : [c, d] = [e, f]) : [a, b] = [e, f] :=
+  (eq2 : [c, d] = [e, f])
+  : [a, b] = [e, f] :=
 begin
   rw eq1,
-  rw eq2
+  rw eq2,
 end
 
 /-
@@ -146,9 +159,8 @@ Proof.
   reflexivity. Qed.
 -/
 
-theorem trans_eq
-  {X : Type}
-  (n m o : X)
+theorem eq.trans
+  (n m o : α)
   (eq1 : n = m)
   (eq2 : m = o) : n = o := by rw [eq1, eq2]
 
@@ -163,18 +175,18 @@ Proof.
   apply eq1. apply eq2. Qed.
 -/
 
+/-
+TODO: figure out if there's similar notation
+      applying eq1 solves the metavariable in lean
+-/
 example
   (a b c d e f : ℕ)
-  (eq1 : [a, b] = [c, d])
-  (eq2 : [c, d] = [e, f]) : [a, b] = [e, f] :=
+  (eq₁ : [a, b] = [c, d])
+  (eq₂ : [c, d] = [e, f]) : [a, b] = [e, f] :=
 begin
-  apply trans_eq,
-  /-
-    don't see an equivalent notation
-    applying eq1 solves the metavariable in lean
-  -/
-  apply eq1,
-  apply eq2
+  apply eq.trans,
+  apply eq₁,
+  apply eq₂,
 end
 
 /-
@@ -188,13 +200,12 @@ Proof.
 
 /- no clue why this is 3 stars-/
 example
-  (n m o p : ℕ)
-  (eq1 : m = minustwo o)
-  (eq2 : n + p = m) : (n + p) = (minustwo o) :=
+  (eq₁ : m = sub_two o)
+  (eq₂ : n + p = m) : (n + p) = (sub_two o) :=
 begin
-  apply trans_eq,
-  apply eq2,
-  apply eq1
+  apply eq.trans,
+  apply eq₂,
+  apply eq₁,
 end
 
 /-
@@ -208,12 +219,15 @@ Proof.
 Qed.
 -/
 
-theorem S_injective (n m : ℕ) (h1 : succ n = succ m) : n = m :=
+/-
+TODO: is there a rw that's better at finishing?
+-/
+theorem succ_inj (h₁ : n.succ = m.succ) : n = m :=
 begin
-  have h2 : n = pred (succ n), refl,
-  rw h2,
-  rw h1,
-  refl -- why is this needed here and never before?
+  have h₂ : n = n.succ.pred, refl,
+  rw h₂,
+  rw h₁,
+  refl,
 end
 
 /-
@@ -226,8 +240,8 @@ Proof.
 Qed.
 -/
 
-theorem S_injective' (n m : ℕ) (h : succ n = succ m) : n = m :=
-  by injection h -- back to lean doing just a bit extra
+/- back to lean doing just a bit extra -/
+theorem succ_inj' (h : n.succ = m.succ) : n = m := by injection h
 
 /-
 Theorem injection_ex1 : ∀(n m o : nat),
@@ -240,12 +254,11 @@ Proof.
 Qed.
 -/
 
-theorem injection_ex1 (n m o : ℕ) (h : [n, m] = [o, o])
-  : [n] = [m] :=
+theorem injection_ex₁ (h : [n, m] = [o, o]) : [n] = [m] :=
 begin
-  injection h with h1 h2,
-  rw h1,
-  rw h2
+  injection h with h₁ h₂,
+  rw h₁,
+  rw h₂,
 end
 
 /-
@@ -258,8 +271,7 @@ Proof.
   reflexivity. Qed.
 -/
 
-theorem injection_ex2 (n m : ℕ) (h : [n] = [m]) : n = m :=
-  by injection h
+theorem injection_ex₂ (h : [n] = [m]) : n = m := by injection h
 
 /-
 Example injection_ex3 : ∀(X : Type) (x y z : X) (l j : list X),
@@ -270,22 +282,14 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem injection_ex3
-  {X : Type} (x y z : X) (l j : list X)
-  (eq1 : x :: y :: l = z :: j)
-  (eq2 : y :: l = x :: j) : x = y :=
+theorem injection_ex₃
+  (x y z : α) (l j : list α)
+  (eq₁ : x :: y :: l = z :: j)
+  (eq₂ : y :: l = x :: j) : x = y :=
 begin
-  -- eq1 is useless, so are other injections from eq2
-  injection eq2 with h1,
-  rw h1
+  injection eq₂ with h₁ h₂,
+  rw h₁,
 end
-
-/-- lazier version -/
-theorem injection_ex3'
-  {X : Type} (x y z : X) (l j : list X)
-  (eq1 : x :: y :: l = z :: j)
-  (eq2 : y :: l = x :: j) : x = y :=
-by injections; simp *
 
 /-
 Theorem eqb_0_l : ∀n,
@@ -301,12 +305,16 @@ Proof.
 Qed.
 -/
 
-/- i think contradiction handles discriminate -/
-theorem eqb_0_l (n : ℕ) (h: 0 =? n = tt) : n = 0 :=
+/-
+not the last time cases will subsume another tactic
+TODO: check earlier usages of cases to see if i already used it like this
+-/
+
+theorem eqb_0_l (h: 0 =? n = tt) : n = 0 :=
 begin
   cases n,
     refl,
-  contradiction
+  cases h,
 end
 
 /-
@@ -323,11 +331,9 @@ Proof.
   intros n m contra. discriminate contra. Qed.
 -/
 
-theorem discriminate_ex1 (n : ℕ) (contra : succ n = 0)
-  : 2 + 2 = 5 := by contradiction
+theorem discriminate_ex₁ (h : n.succ = 0) : 2 + 2 = 5 := by cases h
 
-theorem discriminate_ex2 (n m : ℕ) (h : ff = tt) : [n] = [m] :=
-  by contradiction
+theorem discriminate_ex₂ (n m : ℕ) (h : ff = tt) : [n] = [m] := by cases h
 
 /-
 Example discriminate_ex3 :
@@ -338,11 +344,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-example
-  {X : Type}
-  (x y z : X)
-  (l j : list X)
-  (h : x :: y :: l = []) : x = z := by contradiction
+example (x y z : α) (l j : list α) (h : x :: y :: l = []) : x = z := by cases h
 
 /-
 Theorem S_inj : ∀(n m : nat) (b : bool),
@@ -352,8 +354,11 @@ Proof.
   intros n m b H. simpl in H. apply H. Qed.
 -/
 
-theorem S_inj (n m : ℕ) (b : bool) (h : succ n =? succ m = b)
-  : n =? m = b := by simp at h; exact h
+/-
+this is the first place with in/at?!?!?!
+(and i don't even use it here)
+-/
+theorem succ_injb (h : n.succ =? m.succ = b) : n =? m = b := by apply h
 
 /-
 Theorem silly3' : ∀(n : nat),
@@ -366,21 +371,18 @@ Proof.
   apply H. Qed.
 -/
 
-/- yeah, this does not appear to exist in lean -/
-theorem silly3'
-  (n : ℕ)
-  (eq : n =? 5 = tt → succ (succ n) =? 7 = tt)
-  (h : tt = (n =? 5)) : tt = (succ (succ n) =? 7) :=
+/-
+lean doesn't have symmetry at or apply at.
+let's learn replace and specialize instead
+-/
+theorem silly₃'
+  (heq : n =? 5 = tt → n.succ.succ =? 7 = tt)
+  (h : tt = (n =? 5)) : tt = (n.succ.succ =? 7) :=
 begin
-  have h : (n =? 5) = tt,
-    symmetry,
-    exact h,
-  have h : succ (succ n) =? 7 = tt,
-    rw eq h,
-  have h : tt = (succ (succ n) =? 7),
-    symmetry,
-    exact h,
-  rw h
+  replace h, exact eq.symm h,
+  specialize heq h,
+  replace h, exact eq.symm h,
+  apply h,
 end
 
 /-
@@ -392,7 +394,8 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem plus_n_n_injective : ∀ (n m : ℕ), n + n = m + m → n = m :=
+/- in library as bit0_inj -/
+theorem add_self_inj : ∀{n m : ℕ}, n + n = m + m → n = m :=
 begin
   intro n,
   induction n with n ih,
@@ -400,29 +403,32 @@ begin
     cases m,
       intro h,
       refl,
-    contradiction,
+    intro h,
+    cases h,
   intro m,
   cases m,
     intro h,
-    contradiction,
+    cases h,
   intro h,
-  simp [←plus_n_Sm] at h,
-  simp [ih m h]
+  rw [succ_add, succ_add, add_succ, add_succ] at h,
+  injection h with h,
+  injection h with h,
+  rw ih h,
 end
 
 /-
   leaving for posterity
   this was way easier to write
 -/
-theorem plus_n_n_injective' : ∀ (n m : ℕ), n + n = m + m → n = m
+theorem add_self_inj' : ∀{n m : ℕ}, n + n = m + m → n = m
 | 0 0 := by intro; refl
-| 0 (succ m) := by contradiction
-| (succ n) 0 := by contradiction
-| (succ n) (succ m) :=
+| 0 (m + 1) := by contradiction
+| (n + 1) 0 := by contradiction
+| (n + 1) (m + 1) :=
 begin
   intro h,
-  simp [←plus_n_Sm] at h,
-  simp [plus_n_n_injective n m h]
+  simp only [add_succ, succ_add, add_zero] at h,
+  rw add_self_inj' h,
 end
 
 /- this section really really needs to come before the last problem -/
@@ -572,21 +578,20 @@ Proof.
       apply IHm'. injection eq as goal. apply goal. Qed.
 -/
 
-theorem double_injective_take2
-  (n m : ℕ) (eq : double n = double m) : n = m :=
+theorem double_injective_take₂ (eq : double n = double m) : n = m :=
 begin
   -- could also use revert before the induction
   -- and intros after
   induction m with m ih generalizing n eq,
     cases n,
       refl,
-    contradiction,
+    cases eq,
   cases n,
-    contradiction,
+    cases eq,
   simp,
   apply ih,
   injection eq with goal,
-  injection goal
+  injection goal,
 end
 
 /-
@@ -599,13 +604,14 @@ Proof.
 Qed.
 -/
 
-/- not sure if lean can do intro destruction like that -/
-theorem eqb_id_true
-  (x y : lists.Id) (h : lists.eqb_id x y = tt) : x = y :=
+/-
+congr is like injection but for the goal
+-/
+
+theorem eqb_id_true : ∀x y, eqb_id x y = tt → x = y :=
 begin
-  cases x with x,
-  cases y with y,
-  simp,
+  rintro ⟨m⟩ ⟨n⟩ h,
+  congr,
   apply eqb_true,
   apply h,
 end
@@ -619,15 +625,14 @@ Proof.
 -/
 
 /- lean's nth should be the same as coq's nth_error -/
-theorem nth_error_after_last {X : Type}
-  (n : ℕ) (l : list X) (h : l.length = n) : l.nth n = none :=
+theorem nth_error_after_last (l : list α) (h : l.length = n) : l.nth n = none :=
 begin
   induction n with n ih generalizing l h,
-    cases l,
+    cases l with a l,
       refl,
-    contradiction,
-  cases l,
-    contradiction,
+    cases h,
+  cases l with a l,
+    cases h,
   apply ih,
   injection h,
 end
@@ -647,8 +652,10 @@ Proof.
 Qed.
 -/
 
-/- may as well be cool here -/
-def square {α : Type} [has_mul α] (n : α) := n * n
+/-
+TODO: figure out best place to introduce typeclass stuff
+-/
+def square [has_mul α] (n : α) := n * n
 
 /-
 Lemma square_mult : ∀n m, square (n * m) = square n * square m.
@@ -663,17 +670,20 @@ Proof.
 Qed.
 -/
 
-lemma square_mult (n m : ℕ)
-  : square (n * m) = square n * square m :=
+/-
+TODO: i've been using rw for this. should i use dsimp earlier?
+TODO: figure out if this is the right spot to intro calc
+TODO: find the right place to intro conv
+-/
+lemma square_mult : square (n * m) = square n * square m :=
 begin
-  /- simp [square] would also work -/
   unfold square,
-  -- mul_assoc seems to be a bit different
-  repeat { rw ←mul_assoc },
-  simp [mul_comm, mul_assoc],
+  exact calc
+    n * m * (n * m) = n * (m * n * m) : by rw [mul_assoc, mul_assoc]
+    ...             = n * (n * m * m) : by rw mul_comm n m
+    ...             = n * n * m * m   : by rw [←mul_assoc, ←mul_assoc]
+    ...             = n * n * (m * m) : by rw mul_assoc,
 end
-
-namespace silly
 
 /-
 Definition foo (x: nat) := 5.
@@ -695,15 +705,15 @@ Qed.
   lean requires either a simp attribute
   or explicitly adding as an arg to simp
 
-  reflexivity will look at any def apparently
+  reflexivity is much more aggressive
 -/
-lemma silly_fact_1 (m : ℕ) : foo m + 1 = foo (m + 1) + 1 :=
-  rfl
+lemma silly_fact_1 : foo m + 1 = foo (m + 1) + 1 := rfl
+
+section silly
 
 local attribute [simp] foo
 
-lemma silly_fact_1' (m : ℕ) : foo m + 1 = foo (m + 1) + 1 :=
-  by simp
+lemma silly_fact_1' : foo m + 1 = foo (m + 1) + 1 := by simp
 
 end silly
 
@@ -733,8 +743,7 @@ Proof.
 Abort.
 -/
 
--- lemma silly_fact_2_FAILED (m : ℕ)
---   : bar m + 1 = bar (m + 1) + 1 :=
+-- lemma silly_fact_2_FAILED : bar m + 1 = bar (m + 1) + 1 :=
 -- begin
 --   simp [bar],
 -- end
@@ -749,9 +758,12 @@ Proof.
 Qed.
 -/
 
-lemma silly_fact_2 (m : ℕ)
-  : bar m + 1 = bar (m + 1) + 1 :=
-by cases m; refl
+lemma silly_fact_2 : bar m + 1 = bar (m + 1) + 1 :=
+begin
+  cases m,
+    refl,
+  refl,
+end
 
 /-
 Fact silly_fact_2' : ∀m, bar m + 1 = bar (m + 1) + 1.
@@ -765,14 +777,14 @@ Qed.
 -/
 
 /-
-not sure if unfold is better in coq, but it's not really
-all that helpful here
+unfold in lean doesn't unfold to a match statement
 -/
-lemma silly_fact_2' (m : ℕ)
-  : bar m + 1 = bar (m + 1) + 1 :=
+lemma silly_fact_2' : bar m + 1 = bar (m + 1) + 1 :=
 begin
   unfold bar,
-  cases m; refl,
+  cases m,
+    refl,
+  refl,
 end
 
 /-
@@ -792,14 +804,20 @@ Proof.
       + (* n =? 5 = false *) reflexivity. Qed.
 -/
 
-/-- i think this is the first time i've written ite in lean -/
-def sillyfun (n : ℕ) : bool :=
+def sillyfun : bool :=
   if n =? 3 then ff
   else if n =? 5 then ff
   else ff
 
-theorem sillyfun_false (n : ℕ) : sillyfun n = ff :=
-by cases (n =? 3); cases (n =? 5); simp [sillyfun]
+theorem sillyfun_false : sillyfun n = ff :=
+begin
+  unfold sillyfun,
+  cases n =? 3,
+  case tt : { refl }, /- messing around to reduce nesting -/
+  cases n =? 5,
+    refl,
+  refl,
+end
 
 /-
 Theorem combine_split : ∀X Y (l : list (X * Y)) l1 l2,
@@ -810,46 +828,60 @@ Proof.
 -/
 
 /-
-this works, but there's no way it's the expected solution
+TODO: look for something simpler
 -/
 
-@[simp]
+section split
+
+/-
+using poly.list and notation since that's what split
+and combine were defined with
+-/
+local notation `[]` := poly.list.nil
+local infix :: := poly.list.cons
+local notation {x, y} := poly.prod.mk x y
+local infix × := poly.prod
+
+/-
+injections is a recursive injection at all hypotheses
+changes is show for hypotheses
+-/
 lemma split_injective
-  {α β : Type}
-  {h : α * β} {t : lst (α * β)}
-  {h₁ : α} {t₁ : lst α}
-  {h₂ : β} {t₂ : lst β}
-  (eq : split (h::t) = ⦃h₁::t₁, h₂::t₂⦄) :
-  ⦃h₁, h₂⦄ = h ∧ split t = ⦃t₁, t₂⦄ :=
+  {h : α × β} {t h₁ t₁ h₂ t₂}
+  (eq : split (h::t) = {h₁::t₁, h₂::t₂}) :
+  {h₁, h₂} = h ∧ split t = {t₁, t₂} :=
 begin
-  simp at eq,
-  cases_type* and,
-  have ht₁ : fst (split t) = t₁, simp *,
-  have ht₂ : snd (split t) = t₂, simp *,
+  rw split at eq,
+  injections with eq₁ eq₂ eq₃ eq₄ eq₅ eq₆,
+  change (split t).fst = t₁ at eq₄,
+  change (split t).snd = t₂ at eq₆,
+  cases h with h₁' h₂',
   constructor,
-    cases h; simp * at *,
-  cases (split t); simp * at *,
+    rw [←eq₃, ←eq₅],
+  cases (split t) with t₁' t₂',
+  cases eq₄,
+  cases eq₆,
+  refl,
 end
 
-theorem combine_split {α β : Type} :
-  ∀ (l : lst (α * β))
-  (l₁ : lst α)
-  (l₂ : lst β)
-  (hs : split l = ⦃l₁, l₂⦄),
+theorem combine_split :
+  ∀{l : poly.list (α × β)} {l₁ l₂} (hs : split l = {l₁, l₂}),
   combine l₁ l₂ = l
-| ⟦⟧ ⟦⟧ ⟦⟧ := by simp
-| (h::t) ⟦⟧ _ := by simp
-| (h::t) _ ⟦⟧ := by simp
-| ⟦⟧ (h₁::t₁) _ := by simp
-| ⟦⟧ _ (h₂::t₂) := by simp
-| (h::t) (h₁::t₁) (h₂::t₂) :=
+| [] [] [] hs := rfl
+| (h::t) [] _ hs := by cases hs
+| (h::t) _ [] hs := by cases hs
+| [] (h₁::t₁) _ hs := by cases hs
+| [] _ (h₂::t₂) hs := by cases hs
+| (h::t) (h₁::t₁) (h₂::t₂) hs :=
 begin
-  intro hs,
-  have : ⦃h₁, h₂⦄ = h ∧ split t = ⦃t₁, t₂⦄,
-    exact split_injective hs,
-  simp,
-  exact ⟨this.left, combine_split t t₁ t₂ this.right⟩
+  have, exact split_injective hs,
+  rw combine,
+  congr,
+    exact this.left,
+  exact combine_split this.right,
 end
+
+end split
 
 /-
 Definition sillyfun1 (n : nat) : bool :=
@@ -858,7 +890,7 @@ Definition sillyfun1 (n : nat) : bool :=
   else false.
 -/
 
-def sillyfun1 (n : ℕ) : bool :=
+def sillyfun₁ : bool :=
   if n =? 3 then tt
   else if n =? 5 then tt
   else ff
@@ -874,25 +906,50 @@ Proof.
 Abort.
 -/
 
--- theorem sillyfun1_odd_FAILED (n : ℕ) (eq : sillyfun1 n = tt)
---   : oddb n = tt :=
+-- theorem sillyfun₁_odd_FAILED (eq : sillyfun₁ n = tt) : oddb n = tt :=
 -- begin
---   unfold sillyfun1 at eq,
+--   unfold sillyfun₁ at eq,
 --   cases (n =? 3),
 --   /- stuck -/
 -- end
+/-
+Theorem sillyfun1_odd : ∀(n : nat),
+     sillyfun1 n = true →
+     oddb n = true.
+Proof.
+  intros n eq. unfold sillyfun1 in eq.
+  destruct (n =? 3) eqn:Heqe3.
+  (* Now we have the same state as at the point where we got
+     stuck above, except that the context contains an extra
+     equality assumption, which is exactly what we need to
+     make progress. *)
+    - (* e3 = true *) apply eqb_true in Heqe3.
+      rewrite → Heqe3. reflexivity.
+    - (* e3 = false *)
+     (* When we come to the second equality test in the body
+        of the function we are reasoning about, we can use
+        eqn: again in the same way, allowing us to finish the
+        proof. *)
+      destruct (n =? 5) eqn:Heqe5.
+        + (* e5 = true *)
+          apply eqb_true in Heqe5.
+          rewrite → Heqe5. reflexivity.
+        + (* e5 = false *) discriminate eq. Qed.
+-/
 
-theorem sillyfun1_odd (n : ℕ) (eq : sillyfun1 n = tt)
-  : oddb n = tt :=
+/- lean's case equation does less rewriting than coq's -/
+theorem sillyfun₁_odd (eq : sillyfun₁ n = tt) : oddb n = tt :=
 begin
-  unfold sillyfun1 at eq,
+  unfold sillyfun₁ at eq,
   cases heqe3 : (n =? 3),
+    rw heqe3 at eq,
     cases heqe5 : (n =? 5),
-      simp * at *,
-    have : n = 5, exact eqb_true n 5 heqe5,
-    simp *,
-  have : n = 3, exact eqb_true n 3 heqe3,
-  simp *,
+      rw heqe5 at eq,
+      cases eq,
+    rw eqb_true n 5 heqe5,
+    refl,
+  rw eqb_true n 3 heqe3,
+  refl,
 end
 
 /-
@@ -903,13 +960,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem bool_fn_applied_thrice (f: bool → bool) (b: bool) :
-  f (f (f b)) = f b :=
+theorem bool_fn_applied_thrice (f: bool → bool) : f (f (f b)) = f b :=
 begin
   cases fb : f b,
     cases bb : b,
       rw bb at fb,
-      repeat { rw fb },
+      rw [fb, fb],
     cases ff : f ff,
       exact ff,
     rw bb at fb,
@@ -920,7 +976,7 @@ begin
       exact fb,
     exact ft,
   rw bb at fb,
-  repeat { rw fb },
+  rw [fb, fb],
 end
 
 /-
@@ -930,11 +986,10 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-theorem eqb_sym : ∀ n m : ℕ, (n =? m) = (m =? n)
-| 0 0 := by simp
-| 0 (m + 1) := by simp
-| (n + 1) 0 := by simp
+theorem eqb_sym : ∀n m : ℕ, (n =? m) = (m =? n)
+| 0 0 := rfl
+| 0 (m + 1) := rfl
+| (n + 1) 0 := rfl
 | (n + 1) (m + 1) := eqb_sym n m
 
 /-
@@ -946,13 +1001,13 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem eqb_trans : ∀ n m p : ℕ, n =? m = tt → m =? p = tt → n =? p = tt
-| 0 0 0 := by simp
-| 0 (m + 1) _ := by simp
-| 0 0 (p + 1) := by simp
-| _ (m + 1) 0 := by simp
-| (n + 1) 0 _ := by simp
-| (n + 1) (m + 1) (p + 1) := eqb_trans n m p
+theorem eqb_trans : ∀n m p : ℕ, n =? m = tt → m =? p = tt → n =? p = tt
+| 0 0 0 hn hm := rfl
+| 0 (m + 1) _ hn hm := by cases hn
+| (n + 1) 0 _ hn hm := by cases hn
+| _ 0 (p + 1) hn hm := by cases hm
+| _ (m + 1) 0 hn hm := by cases hm
+| (n + 1) (m + 1) (p + 1) hn hm := eqb_trans n m p hn hm
 
 
 /-
@@ -966,86 +1021,90 @@ Proof.
 -/
 
 /-
-this is horrible
+TODO: this is horrible
 could try cleaning it up, but i'm confident that the approach is wrong
 -/
-@[simp]
-lemma min_succ (m n : ℕ) : min (succ m) (succ n) = min m n + 1 :=
+
+section poly
+
+/-
+using poly.list and notation since that's what split
+and combine were defined with
+-/
+local notation `[]` := poly.list.nil
+local infix :: := poly.list.cons
+local notation {x, y} := poly.prod.mk x y
+local infix × := poly.prod
+
+lemma min_succ : min (succ m) (succ n) = min m n + 1 :=
 begin
-  have : (m + 1) <= (n + 1) ↔ m <= n,
+  have : (succ m) ≤ (succ n) ↔ m ≤ n,
     constructor,
       exact le_of_succ_le_succ,
     exact succ_le_succ,
-  cases nat.decidable_le m n; simp [*, min],
+  rw [min, min],
+  simp only [this], /- no idea why i can't rw this -/
+  cases decidable_le m n,
+    simp only [h], /- also not sure how to plug this in -/
+    rw [if_false, if_false],
+  simp only [h],
+  rw [if_true, if_true],
 end
 
-@[simp]
-lemma combine_len {α β : Type} :
-  ∀ (l₁ : lst α) (l₂ : lst β),
-  length (combine l₁ l₂) = min (length l₁) (length l₂)
-| ⟦⟧ ⟦⟧ := by simp
-| (h::t) ⟦⟧ := by simp
-| ⟦⟧ (h::t) := by simp
-| (h₁::t₁) (h₂::t₂) := by simp [combine_len t₁ t₂]
+lemma combine_len  :
+  ∀(l₁ : poly.list α) (l₂ : poly.list β),
+  (combine l₁ l₂).length = min l₁.length l₂.length
+| [] [] := rfl
+| (h::t) [] := rfl
+| [] (h::t) := rfl
+| (h₁::t₁) (h₂::t₂) :=
+begin
+  unfold combine length,
+  rw min_succ,
+  congr,
+  exact combine_len t₁ t₂,
+end
 
-theorem split_combine {α β : Type} :
-  ∀ (l : lst (α * β))
-  (l₁ : lst α)
-  (l₂ : lst β)
+theorem split_combine :
+  ∀{l : poly.list (α × β)} {l₁ l₂}
   (hc : combine l₁ l₂ = l)
-  (hl : length l₁ = length l₂),
-  split l = ⦃l₁, l₂⦄
-| ⟦⟧ ⟦⟧ ⟦⟧ := by simp
-| (h::t) ⟦⟧ l₂ :=
+  (hl : l₁.length = l₂.length),
+  split l = {l₁, l₂}
+| [] [] [] hc hl := rfl
+| (h::t) [] l₂ hc hl := by cases hc
+| (h::t) (h₁::t₁) [] hc hl := by cases hc
+| [] (h₁::t₁) l₂ hc hl :=
 begin
-  intros,
-  have : length (h::t) = 0,
-    simp [←hc],
-  contradiction,
-end
-| (h::t) l₁ ⟦⟧ :=
-begin
-  intros,
-  have : length (h::t) = 0,
-    simp [←hc],
-  contradiction,
-end
-| ⟦⟧ (h₁::t₁) l₂ :=
-begin
-  intros,
-  have hc₁ : length (combine (h₁::t₁) l₂) = length (⟦⟧),
-    exact congr_arg length hc,
-  have hc₂ : length (combine (h₁::t₁) l₂) = length (h₁::t₁),
+  replace hc, exact congr_arg length hc,
+  have hc' : (combine (h₁::t₁) l₂).length = (h₁::t₁).length,
     rw combine_len (h₁::t₁) l₂,
-    simp *,
-  rw hc₂ at hc₁,
-  contradiction,
+    rw ←hl,
+    rw min_self,
+  rw hc' at hc,
+  cases hc,
 end
-| ⟦⟧ l₁ (h₂::t₂) :=
+| [] l₁ (h₂::t₂) hc hl :=
 begin
-  intros,
-  have hc₁ : length (combine l₁ (h₂::t₂)) = length (⟦⟧),
-    exact congr_arg length hc,
-  have hc₂ : length (combine l₁ (h₂::t₂)) = length (h₂::t₂),
+  replace hc, exact congr_arg length hc,
+  have hc' : (combine l₁ (h₂::t₂)).length = (h₂::t₂).length,
     rw combine_len l₁ (h₂::t₂),
-    simp *,
-  rw hc₂ at hc₁,
-  contradiction,
+    rw ←hl,
+    rw min_self,
+  rw hc' at hc,
+  cases hc,
 end
-| (h::t) (h₁::t₁) (h₂::t₂) :=
+| (h::t) (h₁::t₁) (h₂::t₂) hc hl :=
 begin
-  intros,
-  simp,
-  simp at hc,
-  have hl : length t₁ = length t₂,
-    injection hl,
-  repeat { constructor },
-        simp [←hc.left],
-      show fst (split t) = t₁,
-      simp [split_combine t t₁ t₂ hc.right hl],
-    simp [←hc.left],
-  show snd (split t) = t₂,
-  simp [split_combine t t₁ t₂ hc.right hl],
+  injection hl with hl,
+  simp only [combine] at hc,
+  unfold split,
+  congr,
+        rw ←hc.left,
+      show (split t).fst = t₁,
+      rw split_combine hc.right hl,
+    rw ←hc.left,
+  show (split t).snd = t₂,
+  rw split_combine hc.right hl,
 end
 
 /-
@@ -1057,19 +1116,25 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- this was so easy, wth -/
-
-theorem filter_exercise {α : Type} (test : α → bool) (a : α) :
-  ∀ (l lf : list α) (eq : filter test l = a :: lf), test a = tt
-| [] := by intros; simp * at *
+theorem filter_exercise {test} {a : α} :
+  ∀{l lf} (eq : filter test l = a :: lf), test a = tt
+| [] :=
+begin
+  intros,
+  cases eq,
+end
 | (h::t) :=
 begin
   intros,
-  cases th : test h; simp [th] at eq,
-    exact filter_exercise t lf eq,
-  rw ←eq.left,
-  exact th,
+  rw filter at eq,
+  cases th : test h,
+    simp only [th, bool.coe_sort_ff, if_false] at eq,
+    exact filter_exercise eq,
+  simp only [th, bool.coe_sort_tt, if_true] at eq,
+  rwa eq.left at th,
 end
+
+end poly
 
 /-
 Fixpoint forallb {X : Type} (test : X → bool) (l : list X) : bool
@@ -1110,46 +1175,49 @@ Theorem existsb_existsb' : ∀(X : Type) (test : X → bool) (l : list X),
 Proof. (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-def forallb {α : Type} (p : α → bool) : list α → bool
-| [] := tt
-| (h::t) := if p h then forallb t else ff
+def all : list α → (α → bool) → bool
+| [] p := tt
+| (h::t) p := if p h then all t p else ff
 
-example : forallb oddb [1,3,5,7,9] := rfl
+example : all [1, 3, 5, 7, 9] oddb := rfl
 
-example : forallb negb [ff,ff] := rfl
+example : all [ff, ff] bnot := rfl
 
-example : forallb evenb [0,2,4,5] = ff := rfl
+example : all [0, 2, 4, 5] evenb = ff := rfl
 
-example : forallb (eqb 5) [] := rfl
+example : all [] (eqb 5) := rfl
 
-@[simp]
-def existsb {α : Type} (p : α → bool) : list α → bool
-| [] := ff
-| (h::t) := if p h then tt else existsb t
+def any : list α → (α → bool) → bool
+| [] p := ff
+| (h::t) p := if p h then tt else any t p
 
-example : existsb (eqb 5) [0,2,4,6] = ff := rfl
+example : any [0, 2, 4, 6] (eqb 5) = ff := rfl
 
-example : existsb (andb tt) [tt,tt,ff] := rfl
+example : any [tt, tt, ff] (band tt) := rfl
 
-example : existsb oddb [1,0,0,0,0,3] := rfl
+example : any [1, 0, 0, 0, 0, 3] oddb := rfl
 
-example : existsb evenb [] = ff := rfl
+example : any [] evenb = ff := rfl
 
-/- serious issues if using not forallb -/
+def any' (l : list α) (p : α → bool) : bool := bnot $ all l (bnot ∘ p)
 
-@[simp]
-def existsb' {α : Type} (p : α → bool) (l : list α) : bool :=
-  if forallb (λ a, not $ p a) l then ff else tt
-
-/- serious issues if using equation compiler -/
-
-theorem existsb_existsb' {α : Type} (p : α → bool) (l : list α)
-  : existsb p l = existsb' p l :=
+theorem existsb_existsb' (p) (l : list α) : any l p = any' l p :=
 begin
-  induction l with h t ih,
-    simp,
-  cases ph : p h; simp [ph],
-  simp at ih,
-  exact ih,
+  induction l with a l ih,
+    refl,
+  cases pa : p a,
+    simp only [any, any', all, function.comp_app],
+    simp only [pa],
+    simp only [
+      bool.coe_sort_ff, bool.bnot_false, if_false, if_true, bool.coe_sort_tt
+    ],
+    exact ih,
+  simp only [any, any', all, function.comp_app],
+  simp only [pa],
+  simp only [
+    bool.coe_sort_ff, bool.bnot_false, if_false, if_true,
+    bool.coe_sort_tt, bool.bnot_true
+  ],
 end
+
+end tactics
