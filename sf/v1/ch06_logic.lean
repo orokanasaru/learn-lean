@@ -1,6 +1,22 @@
 import tactic.basic
 import .ch05_tactics
 
+open basics (oddb evenb eqb)
+open induction (double evenb_succ)
+open lists (eqb_refl)
+open tactics (eqb_true)
+
+open list (map cons_append nil_append)
+open nat (pred succ eq_zero_of_mul_eq_zero)
+
+namespace logic
+
+variables {α β γ : Type}
+variable {a : α}
+variables {P Q R : Prop}
+variables {n m o p : ℕ}
+variables {l l' : list α}
+
 /-
 Check 3 = 3.
 (* ===> Prop *)
@@ -10,8 +26,7 @@ Check ∀n m : nat, n + m = m + n.
 
 #check 3 = 3
 
-#check ∀ n m : ℕ, n + m
-= m + n
+#check ∀n m : ℕ, n + m = m + n
 
 /-
 Check 2 = 2.
@@ -24,7 +39,7 @@ Check 3 = 4.
 
 #check 2 = 2
 
-#check ∀ n : ℕ, n = 2
+#check ∀n : ℕ, n = 2
 
 #check 3 = 4
 
@@ -42,7 +57,6 @@ Check plus_fact.
 (* ===> plus_fact : Prop *)
 -/
 
-@[simp]
 def plus_fact : Prop := 2 + 2 = 4
 
 #check plus_fact
@@ -53,7 +67,7 @@ Theorem plus_fact_is_true :
 Proof. reflexivity. Qed.
 -/
 
-theorem plus_fact_is_true : plus_fact := by simp
+theorem plus_fact_is_true : plus_fact := by rw plus_fact
 
 /-
 Definition is_three (n : nat) : Prop :=
@@ -75,10 +89,9 @@ Proof.
 Qed.
 -/
 
-def injective {α β : Type} (f : α → β)
-  :=  ∀ (x y: α), f x = f y → x = y
+def injective (f : α → β) :=  ∀(x y: α), f x = f y → x = y
 
-lemma succ_inj : injective nat.succ :=
+lemma nat.succ_inj : injective succ :=
 begin
   intros n m h,
   injection h,
@@ -100,7 +113,12 @@ Proof.
 Qed.
 -/
 
-example : 3 + 4 = 7 ∧ 2 * 2 = 4 := by split; refl
+example : 3 + 4 = 7 ∧ 2 * 2 = 4 :=
+begin
+  split,
+    refl,
+  refl,
+end
 
 /-
 Lemma and_intro : ∀A B : Prop, A → B → A ∧ B.
@@ -111,10 +129,8 @@ Proof.
 Qed.
 -/
 
-/- in core as and.intro -/
-
-lemma and_intro (α β : Prop) (a : α) (b : β) : α ∧ β :=
-  by split; simp *
+/- TODO: be better about namespacing earlier defs -/
+lemma and.intro (p : P) (q : Q) : P ∧ Q := ⟨p, q⟩
 
 /-
 Example and_example' : 3 + 4 = 7 ∧ 2 * 2 = 4.
@@ -125,7 +141,12 @@ Proof.
 Qed.
 -/
 
-example : 3 + 4 = 7 ∧ 2 * 2 = 4 := by apply and_intro; refl
+example : 3 + 4 = 7 ∧ 2 * 2 = 4 :=
+begin
+  apply and.intro,
+    refl,
+  refl,
+end
 
 /-
 Example and_exercise :
@@ -134,19 +155,23 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma and_exercise : ∀ (n m : ℕ) (h : n + m = 0), n = 0 ∧ m = 0
-| 0 0 := by intros; split; refl
-| (n + 1) m :=
+/- can't be example as it's used below -/
+lemma and_exercise : ∀(n m : ℕ) (h : n + m = 0), n = 0 ∧ m = 0
+| 0 0 h :=
 begin
-  intros,
-  rw [add_comm, ←add_assoc] at h,
-  contradiction,
+  split,
+    refl,
+  refl,
 end
-| n (m + 1) :=
+| (n + 1) m h :=
 begin
-  intros,
+  rw [add_comm, ←add_assoc] at h,
+  cases h,
+end
+| n (m + 1) h :=
+begin
   rw [←add_assoc] at h,
-  contradiction,
+  cases h,
 end
 
 /-
@@ -161,8 +186,11 @@ Proof.
 Qed.
 -/
 
-lemma and_example2 (n m : ℕ) (h : n = 0 ∧ m = 0)
-  : n + m = 0 := by cases h; simp *
+lemma and_example₂ (h : n = 0 ∧ m = 0) : n + m = 0 :=
+begin
+  cases h with hn hm,
+  rw [hn, hm],
+end
 
 /-
 Lemma and_example2' :
@@ -174,7 +202,11 @@ Proof.
 Qed.
 -/
 
-/- not sure how to do this in lean -/
+lemma and_example₂' : n = 0 ∧ m = 0 → n + m = 0 :=
+begin
+  rintro ⟨hn, hm⟩,
+  rw [hn, hm],
+end
 
 /-
 Lemma and_example2'' :
@@ -186,8 +218,7 @@ Proof.
 Qed.
 -/
 
-lemma and_example2'' (n m : ℕ) (hn : n = 0) (hm : m = 0)
-  : n + m = 0 := by simp *
+lemma and_example2'' (hn : n = 0) (hm : m = 0) : n + m = 0 := by rw [hn, hm]
 
 /-
 Lemma and_example3 :
@@ -202,13 +233,14 @@ Proof.
 Qed.
 -/
 
-lemma and_example3 (n m : ℕ) (h : n + m = 0) : n * m = 0 :=
+lemma and_example₃ (h : n + m = 0) : n * m = 0 :=
 begin
   have h : n = 0 ∧ m = 0,
-    exact and_exercise n m h,
+    apply and_exercise,
+    exact h,
   cases h with hn hm,
   rw hn,
-  simp,
+  rw zero_mul,
 end
 
 /-
@@ -219,7 +251,14 @@ Proof.
   apply HP. Qed.
 -/
 
-lemma proj1 (p q : Prop) (h : p ∧ q) : p := by simp *
+lemma and.left (h : P ∧ Q) : P :=
+begin
+  cases h with hp hq,
+  apply hp,
+end
+
+/- h.1 also works -/
+lemma and.left' (h : P ∧ Q) : P := h.left
 
 /-
 Lemma proj2 : ∀P Q : Prop,
@@ -228,7 +267,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma proj2 (p q : Prop) (h : p ∧ q) : q := by exact h.right
+lemma and.right (h : P ∧ Q) : Q := h.right
 
 /-
 Theorem and_commut : ∀P Q : Prop,
@@ -240,8 +279,7 @@ Proof.
     - (* right *) apply HP. Qed.
 -/
 
-theorem and_commut (p q : Prop) (h : p ∧ q) : q ∧ p :=
-  ⟨h.right, h.left⟩
+theorem and.comm (h : P ∧ Q) : Q ∧ P := ⟨h.right, h.left⟩
 
 /-
 Theorem and_assoc : ∀P Q R : Prop,
@@ -251,8 +289,8 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem and_assoc' (p q r : Prop) (h : p ∧ (q ∧ r))
-  : (p ∧ q) ∧ r := ⟨⟨h.left, h.right.left⟩, h.right.right⟩
+theorem and.assoc (h : (P ∧ Q) ∧ R) : P ∧ (Q ∧ R) :=
+  ⟨h.left.left, h.left.right, h.right⟩
 
 /-
 Check and.
@@ -276,8 +314,14 @@ Proof.
 Qed.
 -/
 
-lemma or_example (n m : ℕ) (h : n = 0 ∨ m = 0) : n * m = 0 :=
-  by cases h; simp *
+lemma or_example (h : n = 0 ∨ m = 0) : n * m = 0 :=
+begin
+  cases h with hn hm,
+    rw hn,
+    rw zero_mul,
+  rw hm,
+  refl,
+end
 
 /-
 Lemma or_intro : ∀A B : Prop, A → A ∨ B.
@@ -288,8 +332,11 @@ Proof.
 Qed.
 -/
 
-lemma or_intro (α β : Prop) (a : α) : α ∨ β :=
-  by left; simp *
+lemma or.inl (p : P) : P ∨ Q :=
+begin
+  left,
+  exact p,
+end
 
 /-
 Lemma zero_or_succ :
@@ -302,13 +349,12 @@ Proof.
 Qed.
 -/
 
-open nat
-
-/- i assume the coq version above doesn't work -/
-
-lemma zero_or_succ : ∀ (n : ℕ), n = 0 ∨ n = succ (pred n)
-| 0 := by left; refl
-| (n + 1) := by right; refl
+lemma nat.eq_zero_or_eq_succ_pred : n = 0 ∨ n = succ (pred n) :=
+begin
+  cases n,
+    exact or.inl rfl,
+  exact or.inr rfl,
+end
 
 /-
 Module MyNot.
@@ -323,15 +369,11 @@ Check not.
 End MyNot.
 -/
 
-section my_not
+def not (P : Prop) := P → false
 
-def not' (p : Prop) := p → false
+local prefix `¬` := not
 
-local prefix `¬` := not'
-
-#check not'
-
-end my_not
+#check not
 
 /-
 Theorem ex_falso_quodlibet : ∀(P:Prop),
@@ -342,8 +384,7 @@ Proof.
   destruct contra. Qed.
 -/
 
-theorem ex_false_quodlibet (p : Prop) (f : false) : p
-  := by contradiction
+theorem false.rec (f : false) : P := by cases f
 
 /-
 Fact not_implies_our_not : ∀(P:Prop),
@@ -352,20 +393,13 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma not_implies_our_not (p : Prop) (h : ¬p) (q : Prop)
-  : p → q :=
-begin
-  intro p,
-  contradiction,
-end
+lemma absurd (hnp : ¬P) (hp : P) : Q := false.rec (hnp hp)
 
 /-
 Notation "x ≠ y" := (~(x = y)).
 -/
 
-section
-local infix ` != `:50 := λ x y, ¬(x = y)
-end
+local notation x ≠ y := ¬(x = y)
 
 /-
 Theorem zero_not_one : 0 ≠ 1.
@@ -376,9 +410,11 @@ Proof.
 Qed.
 -/
 
-/- can't unfold not -/
-
-theorem zero_not_one : 0 ≠ 1 := by simp
+theorem zero_ne_one : 0 ≠ 1 :=
+begin
+  unfold not,
+  rintro ⟨contra⟩,
+end
 
 /-
 Theorem not_False :
@@ -400,14 +436,27 @@ Proof.
   intros P H. unfold not. intros G. apply G. apply H. Qed.
 -/
 
-/- as defined in core -/
-theorem not_false' : ¬false := id
+theorem not_false : ¬false :=
+begin
+  unfold not,
+  rintro ⟨h⟩,
+end
 
-theorem contradiction_implies_anything
-  (p q : Prop) (h : p ∧ ¬p) : q := by cases h; contradiction
+theorem contradiction_implies_anything (h : P ∧ ¬P) : Q :=
+begin
+  cases h with hp hnp,
+  unfold not at hnp,
+  replace hp, exact hnp hp,
+  cases hp,
+end
 
-theorem double_neg (p : Prop) (h : p) : ¬¬p :=
-by by_contra; contradiction
+theorem non_contradictory_intro (h : P) : ¬¬P :=
+begin
+  unfold not,
+  intro g,
+  apply g,
+  exact h,
+end
 
 /-
 Theorem contrapositive : ∀(P Q : Prop),
@@ -416,15 +465,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem contrapositive (p q : Prop) (h: p → q)
-  : (¬q → ¬p) :=
+theorem contrapositive (h: P → Q) : (¬Q → ¬P) :=
 begin
   intro hnq,
-  assume p,
-  /- i totally forgot this style works -/
-  have q,
-    exact h p,
-  contradiction,
+  unfold not,
+  intro p,
+  exact absurd hnq (h p),
 end
 
 /-
@@ -434,12 +480,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem not_both_true_and_false (p : Prop) :
-  ¬(p ∧ ¬p) :=
+theorem not_both_true_and_false : ¬(P ∧ ¬P) :=
 begin
-  by_contra h,
-  cases h,
-  contradiction,
+  unfold not,
+  rintro ⟨hp, hnp⟩,
+  exact hnp hp,
 end
 
 /-
@@ -456,16 +501,15 @@ Proof.
 Qed.
 -/
 
-/-
-the inability to unfold not is a constant pita
-bool and prop having different values for t/f also is
-
-i've yet to find a case where exfalso doesn't just
-destroy all necessary info
--/
-
-theorem not_true_is_false (b : bool) (h : b ≠ true)
-  : b = false := by simp * at *
+theorem not_true_is_false {b: bool} (h : b ≠ tt) : b = ff :=
+begin
+  cases b,
+    refl,
+  unfold not at h,
+  apply false.rec,
+  apply h,
+  refl,
+end
 
 /-
 Theorem not_true_is_false' : ∀b : bool,
@@ -480,17 +524,22 @@ Proof.
 Qed.
 -/
 
-/-
-yeah, still somewhere between unpleasant and
-impossible in lean
--/
+theorem not_true_is_false' {b : bool} (h : b ≠ tt) : b = ff :=
+begin
+  cases b,
+    refl,
+  unfold not at h,
+  exfalso,
+  apply h,
+  refl,
+end
 
 /-
 Lemma True_is_true : True.
 Proof. apply I. Qed.
 -/
 
-lemma True_is_true : tt := by simp
+lemma true_is_tt : true := trivial
 
 /-
 Module MyIff.
@@ -523,15 +572,17 @@ Proof.
 Qed.
 -/
 
-section
+section my_iff
 
-def iff' (p q : Prop) := p → q ∧ q → p
+/- this def doesn't work with rewrite -/
+structure iff (P Q : Prop): Prop :=
+intro :: (mp : P → Q) (mpr : Q → P)
 
-local infix ↔ := iff'
+local infix ↔ := iff
 
-end
+end my_iff
 
-theorem iff_sym (p q : Prop) (h : p ↔ q) : q ↔ p :=
+theorem iff.sym (h : P ↔ Q) : Q ↔ P :=
 begin
   cases h with hpq hqp,
   split,
@@ -540,7 +591,14 @@ begin
 end
 
 lemma not_true_iff_false (b: bool) : b ≠ tt ↔ b = ff :=
-  by split; simp
+begin
+  split,
+    apply not_true_is_false,
+  intro h,
+  rw h,
+  intro h',
+  cases h',
+end
 
 /-
 Theorem or_distributes_over_and : ∀P Q R : Prop,
@@ -549,16 +607,17 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem or_distributes_over_and (p q r : Prop) :
-  p ∨ (q ∧ r) ↔ (p ∨ q) ∧ (p ∨ r) :=
+theorem or_and_distrib_left : P ∨ (Q ∧ R) ↔ (P ∨ Q) ∧ (P ∨ R) :=
 begin
-  split; intro h,
-    cases h with hp hqr,
-      split; exact or.inl hp,
+  split,
+    rintro (hp | hqr),
+      split,
+        exact or.inl hp,
+      exact or.inl hp,
     split,
       exact or.inr hqr.left,
     exact or.inr hqr.right,
-  cases h with hpq hpr,
+  rintro ⟨hpq, hpr⟩,
   cases hpq with hp hq,
     exact or.inl hp,
   cases hpr with hp hr,
@@ -567,29 +626,51 @@ begin
 end
 
 /-
+From Coq Require Import Setoids.Setoid.
+-/
+
+/-
+nothing like that needed in lean
+-/
+
+/-
 Lemma mult_0 : ∀n m, n * m = 0 ↔ n = 0 ∨ m = 0.
+Proof.
+  split.
+  - apply mult_eq_0.
+  - apply or_example.
+Qed.
 
 Lemma or_assoc :
   ∀P Q R : Prop, P ∨ (Q ∨ R) ↔ (P ∨ Q) ∨ R.
+Proof.
+  intros P Q R. split.
+  - intros [H | [H | H]].
+    + left. left. apply H.
+    + left. right. apply H.
+    + right. apply H.
+  - intros [[H | H] | H].
+    + left. apply H.
+    + right. left. apply H.
+    + right. right. apply H.
+Qed.
 -/
 
-lemma mult_0 (n m : ℕ) :
-  n * m = 0 ↔ n = 0 ∨ m = 0 :=
+lemma mul_zero : n * m = 0 ↔ n = 0 ∨ m = 0 :=
 begin
   split,
    exact eq_zero_of_mul_eq_zero,
   apply or_example,
 end
 
-lemma or_assoc' (p q r : Prop) :
-  p ∨ (q ∨ r) ↔ (p ∨ q) ∨ r :=
+lemma or.assoc : P ∨ (Q ∨ R) ↔ (P ∨ Q) ∨ R :=
 begin
-  split; intro h,
-    cases_type* or,
+  split,
+    rintro (h | h | h),
         exact or.inl (or.inl h),
       exact or.inl (or.inr h),
     exact or.inr h,
-  cases_type* or,
+  rintro (⟨h | h⟩ | h),
       exact or.inl h,
     exact or.inr (or.inl h),
   exact or.inr (or.inr h),
@@ -605,11 +686,10 @@ Proof.
 Qed.
 -/
 
-lemma mult_0_3 (n m p : ℕ) :
-  n * m * p = 0 ↔ n = 0 ∨ m = 0 ∨ p = 0 :=
+lemma mul_zero_three : n * m * p = 0 ↔ n = 0 ∨ m = 0 ∨ p = 0 :=
 begin
-  repeat { rewrite mult_0 },
-  rewrite or_assoc,
+  rw [mul_zero, mul_zero],
+  rewrite or.assoc,
 end
 
 /-
@@ -623,8 +703,11 @@ Qed.
 /- apply doesn't seem to work with iff in lean -/
 /- can use mp/mpr to pick a direction -/
 
-lemma apply_iff_example (n m : ℕ) :
-  n * m = 0 → n = 0 ∨ m = 0 := (mult_0 n m).mp
+lemma apply_iff_example (h : n * m = 0) : n = 0 ∨ m = 0 :=
+begin
+  apply mul_zero.mp,
+  exact h,
+end
 
 /-
 Lemma four_is_even : ∃n : nat, 4 = n + n.
@@ -633,7 +716,7 @@ Proof.
 Qed.
 -/
 
-lemma four_is_even : ∃n : ℕ, 4 = n + n := ⟨2, rfl⟩
+lemma four_is_even : ∃n : ℕ, 4 = n + n := by use 2
 
 /-
 Theorem exists_example_2 : ∀n,
@@ -646,19 +729,12 @@ Proof.
   apply Hm. Qed.
 -/
 
-theorem exists_example_2 (n : ℕ) (h : ∃ m, n = 4 + m) :
-  ∃ o, n = 2 + o :=
+theorem exists_example₂ (h : ∃m, n = 4 + m) : ∃o, n = 2 + o :=
 begin
   cases h with m hm,
-  /-
-  i'm sure there's a nicer way
-  possibly involving calc
-  -/
-  exact ⟨m + 2, begin
-    rw add_comm m,
-    rw ←add_assoc,
-    exact hm,
-  end⟩
+  use 2 + m,
+  rw ←add_assoc,
+  exact hm,
 end
 
 /-
@@ -668,13 +744,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem dist_not_exists {α : Type} (p : α → Prop) (h : ∀x, p x)
-  : ¬(∃x, ¬p x) :=
+#check exists_or_distrib
+
+theorem not_exists_not.mpr (p : α → Prop) (h : ∀x, p x) : ¬(∃x, ¬p x) :=
 begin
-  by_contra he,
-  cases he with a hnp,
-  have hp, exact h a,
-  contradiction,
+  rintro ⟨a, hnp⟩,
+  exact hnp (h a),
 end
 
 /-
@@ -684,18 +759,15 @@ Proof.
    (* FILL IN HERE *) Admitted.
 -/
 
-theorem dist_exists_or {α : Type} (p q : α → Prop) :
+theorem exists_or_distrib (p q : α → Prop) :
   (∃a, p a ∨ q a) ↔ (∃a, p a) ∨ (∃a, q a) :=
 begin
-  split; intro,
-    cases a with a h,
-    cases h with hp hq,
+  split,
+    rintro ⟨a, hp | hq⟩,
       exact or.inl ⟨a, hp⟩,
     exact or.inr ⟨a, hq⟩,
-  cases a with hp hq,
-    cases hp with a hp,
+  rintro (⟨a, hp⟩ | ⟨a, hq⟩),
     exact ⟨a, or.inl hp⟩,
-  cases hq with a hq,
   exact ⟨a, or.inr hq⟩,
 end
 
@@ -707,8 +779,7 @@ Fixpoint In {A : Type} (x : A) (l : list A) : Prop :=
   end.
 -/
 
-@[simp]
-def In {α : Type} (a : α) : list α → Prop
+def In (a : α) : list α → Prop
 | [] := false
 | (h::t) := h = a ∨ In t
 
@@ -731,14 +802,25 @@ Proof.
 Qed.
 -/
 
-example : In 4 [1,2,3,4,5] := by simp
-
-example (n : ℕ) (h : In n [2, 4]) : ∃n', n = 2 * n' :=
+example : In 4 [1, 2, 3, 4, 5] :=
 begin
-  simp at h,
-  cases h,
-    exact ⟨1, by rw ←h; refl⟩,
-  exact ⟨2, by rw ←h; refl⟩
+  right,
+  right,
+  right,
+  left,
+  refl,
+end
+
+/-
+oh yeah, rcases doing subst for rfl is awesome
+-/
+example (h : In n [2, 4]) : ∃n', n = 2 * n' :=
+begin
+  rcases h with rfl | rfl | ⟨⟨⟩⟩,
+    use 1,
+    refl,
+  use 2,
+  refl,
 end
 
 /-
@@ -758,21 +840,13 @@ Proof.
 Qed.
 -/
 
-open list
-
-lemma in_map {α β : Type}
-  (f : α → β) (l : list α) (a : α) (h : In a l)
-  : In (f a) (map f l) :=
+lemma in_map (f : α → β) (h : In a l) : In (f a) (l.map f) :=
 begin
-  induction l with h t ih,
-    simp at h,
-    contradiction,
-  simp at *,
-  cases h with hl hr,
-    left,
-    rw hl,
-  right,
-  exact ih hr,
+  induction l with a' l ih,
+    cases h,
+  rcases h with rfl | h,
+    exact or.inl rfl,
+  exact or.inr (ih h),
 end
 
 /-
@@ -784,33 +858,33 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma in_map_iff {α β : Type}
-  (f : α → β) (l : list α) (b : β)
-  : In b (map f l) ↔ ∃a, f a = b ∧ In a l :=
+/-
+TODO: at this point, i realize a lot of unfold and rw aren't needed
+      as unification will handle refl stuff
+-/
+
+lemma in_map_iff (f : α → β) (b : β) : In b (l.map f) ↔ ∃a, f a = b ∧ In a l :=
 begin
-  split; intro h,
-    induction l with h t ih; simp at h,
-      contradiction,
-    cases h with hl hr,
-      have hr : In h (h :: t),
-        simp,
-      exact ⟨h, hl, hr⟩,
-    have ih, exact ih hr,
-    cases ih with a ih,
-    cases ih with ihl ihr,
-    have ihr : In a (h::t),
-      simp,
-      exact or.inr ihr,
-    exact ⟨a, ihl, ihr⟩,
-  cases h with a h,
-  induction l with h t ih; simp at h,
-    contradiction,
-  simp,
-  cases h with hl hr,
-  cases hr,
-    rw hr,
-    exact or.inl hl,
-  exact or.inr (ih ⟨hl, hr⟩),
+  split,
+    induction l with a l ih,
+      rintro ⟨⟩,
+    rintro (rfl | h),
+      use a,
+      split,
+        refl,
+      exact or.inl rfl,
+    specialize ih h,
+    rcases ih with ⟨a', rfl, ih⟩,
+    use a',
+    split,
+      refl,
+    exact or.inr ih,
+  rintro ⟨a', rfl, h⟩,
+  induction l with a l ih,
+    cases h,
+  rcases h with rfl | h,
+    exact or.inl rfl,
+  exact or.inr (ih h),
 end
 
 /-
@@ -820,34 +894,33 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma in_app_iff {α : Type} (l l' : list α) (a : α) :
-  In a (l ++ l') ↔ In a l ∨ In a l' :=
+lemma in_app_iff : In a (l ++ l') ↔ In a l ∨ In a l' :=
 begin
-  split; intro h,
-    induction l with hl tl ih; simp at h,
+  split,
+    intro h,
+    induction l with a' l ih,
       exact or.inr h,
-    cases h with hl hr,
-      simp,
-      exact or.inl (or.inl hl),
-    have ih, exact ih hr,
-    cases ih with ihl ihr,
-      simp,
-      exact or.inl (or.inr ihl),
-    exact or.inr ihr,
+    rcases h with rfl | h,
+      exact or.inl (or.inl rfl),
+    specialize ih h,
+    cases ih,
+      exact or.inl (or.inr ih),
+    exact or.inr ih,
+  rintro (h | h),
+    induction l with a' l ih,
+      cases h,
+    rcases h with rfl | h,
+      exact or.inl rfl,
+    exact or.inr (ih h),
+  cases l' with a' l',
+    cases h,
   cases h,
-    induction l with h t ih; simp at h,
-      contradiction,
-    simp,
-    cases h with hl hr,
-      exact or.inl hl,
-    exact or.inr (ih hr),
-  induction l' with h t ih generalizing l; simp at h,
-    contradiction,
-  cases h with hl hr; induction l with hl tl ihl; simp,
-        exact or.inl hl,
-      exact or.inr ihl,
-    exact or.inr hr,
-  exact or.inr ihl,
+    induction l with a'' l ih,
+      exact or.inl h,
+    exact or.inr ih,
+  induction l with a'' l ih,
+    exact or.inr h,
+  exact or.inr ih,
 end
 
 /-
@@ -862,28 +935,27 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- hint remember def for in -/
-
-@[simp]
-def all {α : Type} (p : α → Prop) : list α → Prop
+def all (p : α → Prop) : list α → Prop
 | [] := true
 | (h::t) := p h ∧ all t
 
-lemma all_in {α : Type} (p : α → Prop) (l : list α)
-  : (∀ a, In a l → p a) ↔ all p l :=
+lemma all_in (p : α → Prop) : (∀{a}, In a l → p a) ↔ all p l :=
 begin
-  split; intro h; induction l with hd t ih; simp at h; simp,
+  split,
+    intro h,
+    induction l with a l ih,
+      unfold all,
     split,
       apply h,
-      simp,
+      exact or.inl rfl,
     apply ih,
-    intros a i,
-    exact h a (or.inr i),
-  intros a i,
-  cases i,
-    rw i at h,
-    exact h.left,
-  exact ih h.right a i,
+    intros a' i,
+    exact h (or.inr i),
+  induction l with a l ih,
+    rintro h a' ⟨⟩,
+  rintro ⟨hl, hr⟩ a' (rfl | i),
+    exact hl,
+  exact ih hr i,
 end
 
 /-
@@ -896,8 +968,7 @@ either i super missed the mark with this def
 or this is not a three star problem
 -/
 
-@[simp]
-def combine_odd_even (podd peven : ℕ → Prop) (n : ℕ) : Prop :=
+def combine_odd_even (podd peven : ℕ → Prop) (n : ℕ): Prop :=
   if oddb n then podd n else peven n
 
 /-
@@ -927,33 +998,46 @@ Proof.
 -/
 
 theorem combine_odd_even_intro
-  (podd peven : ℕ → Prop) (n : ℕ)
+  (podd peven : ℕ → Prop)
   (hodd : oddb n = true → podd n)
   (heven : oddb n = false → peven n)
   : combine_odd_even podd peven n :=
 begin
-  simp at *,
-  cases (evenb n); simp *,
+  unfold combine_odd_even,
+  cases oddb n,
+    exact heven rfl,
+  exact hodd rfl,
 end
 
 theorem combine_odd_even_elim_odd
-  (podd peven : ℕ → Prop) (n : ℕ)
+  (podd peven : ℕ → Prop)
   (h : combine_odd_even podd peven n)
   (hodd : oddb n = true)
-  : podd n := by cases (evenb n); simp * at *
+  : podd n :=
+begin
+  unfold combine_odd_even at h,
+  cases oddb n,
+    cases hodd,
+  exact h,
+end
 
 theorem combine_odd_even_elim_even
-  (podd peven : ℕ → Prop) (n : ℕ)
+  (podd peven : ℕ → Prop)
   (h : combine_odd_even podd peven n)
   (heven : oddb n = false)
-  : peven n := by cases (evenb n); simp * at *
+  : peven n :=
+begin
+  unfold combine_odd_even at h,
+  cases oddb n,
+    exact h,
+  cases heven,
+end
 
 /-
 Check plus_comm.
 (* ===> forall n m : nat, n + m = m + n *)
 -/
 
-/- yay metavariables -/
 #check add_comm
 
 /-
@@ -968,8 +1052,7 @@ Proof.
 Abort.
 -/
 
--- lemma plus_comm3 (x y z : ℕ)
---   : x + (y + z) = (z + y) + x :=
+-- lemma plus_comm3 : n + (m + o) = (o + m) + m :=
 -- begin
 --   rw add_comm,
 --   rw add_comm,
@@ -989,12 +1072,10 @@ Proof.
 Qed.
 -/
 
-lemma plus_comm3_take2 (x y z : ℕ)
-  : x + (y + z) = (z + y) + x :=
+lemma plus_comm3_take2 : n + (m + o) = (o + m) + n :=
 begin
   rw add_comm,
-  have h : y + z = z + y,
-    rw add_comm,
+  have h : m + o = o + m, rw add_comm,
   rw h,
 end
 
@@ -1009,21 +1090,33 @@ Proof.
 Qed.
 -/
 
-lemma plus_comm3_take3 (x y z : ℕ)
-  : x + (y + z) = (z + y) + x :=
+/-
+TODO: i find it unlikely i haven't used this earlier
+-/
+lemma plus_comm3_take3 : n + (m + o) = (o + m) + n :=
 begin
   rw add_comm,
   /- i assume partial app works in coq as well -/
-  rw add_comm y,
+  rw add_comm m,
 end
 
-lemma in_not_nil {α : Type} (a : α) (l : list α) (h : In a l)
-  : l ≠ [] :=
+/-
+Lemma in_not_nil :
+  ∀A (x : A) (l : list A), In x l → l ≠ [].
+Proof.
+  intros A x l H. unfold not. intro Hl. destruct l.
+  - simpl in H. destruct H.
+  - discriminate Hl.
+Qed.
+-/
+
+lemma in_not_nil (h : In a l) : l ≠ [] :=
 begin
-  cases l with hd t,
-    simp at h,
-    contradiction,
-  simp,
+  unfold not,
+  intro hl,
+  cases l with a l,
+    cases h,
+  cases hl,
 end
 
 /-
@@ -1071,18 +1164,20 @@ Proof.
 Qed.
 -/
 
--- lemma in_not_nil_42 (l : list ℕ) (h : In 42 l)
---   : l ≠ [] :=
--- begin
---   apply in_not_nil,
---   sorry
--- end
+/- this works perfectly fine in lean -/
+lemma in_not_nil_42 (l : list ℕ) (h : In 42 l) : l ≠ [] :=
+begin
+  apply in_not_nil,
+  exact h,
+end
 
-lemma in_not_nil_42_take2 (l : list ℕ) (h : In 42 l)
-  : l ≠ [] :=
+/-
+TODO: see if lean has named parameters
+-/
+lemma in_not_nil_42_take2 (l : list ℕ) (h : In 42 l) : l ≠ [] :=
 begin
   /- don't know of a syntax like with -/
-  apply in_not_nil 42,
+  apply in_not_nil,
   exact h,
 end
 
@@ -1090,18 +1185,14 @@ end
 -- lemma in_not_nil_42_take3 (l : list ℕ) (h : In 42 l)
 --   : l ≠ [] := sorry
 
-lemma in_not_nil_42_take4 (l : list ℕ) (h : In 42 l)
-  : l ≠ [] :=
+lemma in_not_nil_42_take4 (l : list ℕ) (h : In 42 l) : l ≠ [] :=
 begin
   apply @in_not_nil ℕ 42,
   exact h,
 end
 
-lemma in_not_nil_42_take5 (l : list ℕ) (h : In 42 l)
-  : l ≠ [] :=
-begin
-  apply in_not_nil _ _ h,
-end
+lemma in_not_nil_42_take5 (l : list ℕ) (h : In 42 l) : l ≠ [] :=
+by apply in_not_nil h
 
 /-
 Example lemma_application_ex :
@@ -1116,10 +1207,12 @@ Proof.
 Qed.
 -/
 
-/-
-didn't spend a lot of time, but couldn't get lean
-to compile this
--/
+example {ns: list ℕ} (h : In n (ns.map (λm, m * 0))): n = 0 :=
+begin
+  cases (in_map_iff _ _).mp h with m hm,
+  rw ←hm.left,
+  refl,
+end
 
 /-
 Example function_equality_ex1 :
@@ -1127,7 +1220,7 @@ Example function_equality_ex1 :
 Proof. reflexivity. Qed.
 -/
 
-example : (λ x, 3 + x) = (λ x, (pred 4) + x) := rfl
+example : (λx, 3 + x) = (λx, (pred 4) + x) := rfl
 
 /-
 Example function_equality_ex2 :
@@ -1137,7 +1230,7 @@ Proof.
 Abort.
 -/
 
--- example : (λ x, x + 1) = (λ x, 1 + x) := sorry
+-- example : (λx, x + 1) = (λx, 1 + x) := sorry
 
 /-
 Axiom functional_extensionality : ∀{X Y: Type}
@@ -1146,9 +1239,7 @@ Axiom functional_extensionality : ∀{X Y: Type}
 -/
 
 
-axiom functional_extensionality
-  {α β : Type} {f g : α → β}
-  : (∀ a, f a = g a) → f = g
+axiom functional_extensionality {f g : α → β} : (∀a, f a = g a) → f = g
 
 /-
 Example function_equality_ex2 :
@@ -1159,16 +1250,19 @@ Proof.
 Qed.
 -/
 
-lemma function_equality_ex₂ : (λ x, x + 1) = (λ x, 1 + x) :=
+lemma function_equality_ex₂ : (λx, x + 1) = (λx, 1 + x) :=
 begin
   apply functional_extensionality,
-  intro,
+  intro x,
   rw add_comm,
 end
 
 /- built in as funext -/
+/-
+TODO: examine previous definitions that have tactics
+-/
 
-example : (λ x, x + 1) = (λ x, 1 + x) :=
+example : (λx, x + 1) = (λx, 1 + x) :=
 begin
   funext,
   rw add_comm,
@@ -1196,57 +1290,50 @@ Definition tr_rev {X} (l : list X) : list X :=
   rev_append l [].
 -/
 
-open poly
+section reverse
 
-def rev_append {α : Type} : lst α → lst α → lst α
-| ⟦⟧ l₂ := l₂
+/- using poly.list as the library uses a rev_append style reverse -/
+
+open poly.list
+
+local notation `[]` := nil
+local infix :: := cons
+local infix ++ := append
+
+def rev_append : poly.list α → poly.list α → poly.list α
+| [] l₂ := l₂
 | (h::t) l₂ := rev_append t (h::l₂)
 
-def tr_rev {α : Type} (l : lst α) := rev_append l ⟦⟧
+def tr_rev (l: poly.list α) := rev_append l []
 
 /-
 Lemma tr_rev_correct : ∀X, @tr_rev X = @rev X.
 (* FILL IN HERE *) Admitted.
 -/
 
-/-
-ih : tr_rev t = rev t
-⊢ rev_append t ⟦h⟧ = rev t ++ ⟦h⟧
--/
-
-/-
-did a fair amount of hacking to have clean term language code generated
-taking the list without funext is slightly nicer
-
-also went for being pretty explicit
-
-dsimp does less magic than unfold, 'unfold foo' is basically 'simp only [foo]'
-
-the lemma and theorem can pretty much just be done with simp*
-this is 4 stars because finding the lemma to define is non-trivial
--/
-
-lemma rev_app {α : Type} (l₁ : lst α)
-  : ∀ l₂ l₃, rev_append l₁ l₂ ++ l₃ = rev_append l₁ (l₂ ++ l₃) :=
+lemma rev_app (l₁ l₂ l₃: poly.list α)
+  : rev_append l₁ l₂ ++ l₃ = rev_append l₁ (l₂ ++ l₃) :=
 begin
-  induction l₁ with h₁ t₁ ih; intros,
+  induction l₁ with a l₁ ih generalizing l₂ l₃,
     refl,
-  dsimp only [rev_append],
+  unfold rev_append,
   rw ih,
   refl,
 end
 
-lemma tr_rev_correct {α : Type} : @tr_rev α = @rev α :=
+lemma tr_rev_correct : @tr_rev α = reverse :=
 begin
   funext,
-  induction l with h t ih; dsimp only [rev_append, tr_rev, rev],
+  induction l with a l ih,
     refl,
+  unfold reverse,
   rw ←ih,
-  dsimp only [rev_append, tr_rev],
+  unfold rev_append tr_rev,
   rw rev_app,
-  dsimp only [app],
   refl,
 end
+
+end reverse
 
 /-
 Example even_42_bool : evenb 42 = true.
@@ -1260,8 +1347,7 @@ Example even_42_prop : ∃k, 42 = double k.
 Proof. ∃21. reflexivity. Qed.
 -/
 
-example : ∃ (k : ℕ), 42 = double k
-  := ⟨21, rfl⟩
+example : ∃k, 42 = double k := ⟨21, rfl⟩
 
 /-
 Theorem evenb_double : ∀k, evenb (double k) = true.
@@ -1272,12 +1358,11 @@ Proof.
 Qed.
 -/
 
-theorem evenb_double (k : ℕ)
-  : evenb (double k) = tt :=
+theorem evenb_double (k) : evenb (double k) = tt :=
 begin
   induction k with k ih,
     refl,
-  simp,
+  unfold double evenb,
   exact ih,
 end
 
@@ -1290,39 +1375,56 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
--- doesn't work, but should be something like...
--- theorem evenb_double_conv :
---   ∀ n, ∃ k, n = if evenb n
---            then double k
---            else succ (double k)
--- | 0 := <0, rfl⟩
--- | 1 := ⟨1, rfl⟩
--- | (succ (succ n)) := ⟨succ evenb_double_conv n, rfl⟩
-
-theorem evenb_double_conv (n : ℕ)
-  : ∃ k, n = if evenb n
-             then double k
-             else succ (double k) :=
+theorem evenb_double_conv
+  : ∃k, n = if evenb n then double k else succ (double k) :=
 begin
   induction n with n ih,
     exact ⟨0, rfl⟩,
-  cases h : (evenb n); cases ih with w ih; simp * at *,
-    exact ⟨succ w, rfl⟩,
-  exact ⟨w, rfl⟩
+  cases ih with k ih,
+    rw evenb_succ,
+    conv in (n + 1) { rw ih, },
+    cases h : evenb n,
+      use succ k,
+      refl,
+    use k,
+    refl,
 end
 
-theorem even_bool_prop (n : ℕ)
-  : evenb n = tt ↔ ∃ k, n = double k :=
+theorem evenb_double_conv'
+  : ∀n, ∃k, n = if evenb n then double k else succ (double k)
+| 0 := ⟨0, rfl⟩
+| 1 := ⟨0, rfl⟩
+| (n + 2) :=
+begin
+  cases evenb_double_conv' n with k ih,
+  use succ k,
+  rw [evenb_succ, evenb_succ],
+  conv in (n + 2) { rw ih, },
+  cases evenb n,
+    refl,
+  refl,
+end
+
+/-
+Theorem even_bool_prop : ∀n,
+  evenb n = true ↔ ∃k, n = double k.
+Proof.
+  intros n. split.
+  - intros H. destruct (evenb_double_conv n) as [k Hk].
+    rewrite Hk. rewrite H. ∃k. reflexivity.
+  - intros [k Hk]. rewrite Hk. apply evenb_double.
+Qed.
+-/
+
+theorem even_bool_prop : evenb n = tt ↔ ∃k, n = double k :=
 begin
   split,
     intro h,
-    cases (evenb_double_conv n) with k hk,
+    cases (@evenb_double_conv n) with k hk,
     rw hk,
     rw h,
     exact ⟨k, rfl⟩,
-  intro k,
-  cases k with k hk,
-  rw hk,
+  rintro ⟨k, rfl⟩,
   apply evenb_double,
 end
 
@@ -1336,15 +1438,11 @@ Proof.
 Qed.
 -/
 
-open lists
-
-theorem eqb_eq (n₁ n₂ : ℕ)
-  : n₁ =? n₂ = tt ↔ n₁ = n₂ :=
+theorem eqb_eq : n =? m = tt ↔ n = m :=
 begin
   split,
     apply eqb_true,
-  intro h,
-  rw h,
+  rintro rfl,
   rw ←eqb_refl,
 end
 
@@ -1358,8 +1456,7 @@ Fail Definition is_even_prime n :=
 n = 2 is decidable, so lean allows it
 not all props are
 -/
-def is_even_prime (n : ℕ) :=
-  if n = 2 then tt else ff
+def is_even_prime := if n = 2 then tt else ff
 
 /-
 Example even_1000 : ∃k, 1000 = double k.
@@ -1381,12 +1478,11 @@ Proof. apply even_bool_prop. reflexivity. Qed.
 -/
 
 /-
-iffs are much less convenient to work
-with in lean
+need to mention the direction in lean
 -/
 example : ∃k, 1000 = double k :=
 begin
-  apply (even_bool_prop _).mp,
+  apply even_bool_prop.mp,
   refl,
 end
 
@@ -1415,7 +1511,9 @@ Qed.
 example : ¬(∃k, 1001 = double k) :=
 begin
   rw ←even_bool_prop,
-  simp
+  unfold not,
+  intro h,
+  cases h,
 end
 
 /-
@@ -1431,10 +1529,9 @@ Proof.
 Qed.
 -/
 
-lemma plus_eqb_example (n m p : ℕ) (h : n =? m = tt)
-  : n + p =? m + p = tt :=
+lemma plus_eqb_example (h : n =? m = tt) : n + p =? m + p = tt :=
 begin
-  rw eqb_eq at *,
+  rw eqb_eq at h ⊢,
   rw h,
 end
 
@@ -1450,13 +1547,36 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma andb_true_iff (b₁ b₂ : bool)
+lemma band_eq_true_eq_eq_tt_and_eq_tt (b₁ b₂ : bool)
   : b₁ && b₂ = tt ↔ b₁ = tt ∧ b₂ = tt :=
-by split; intro h; simp at *; exact h
+begin
+  split,
+    intro h,
+    cases b₁,
+      cases h,
+    cases b₂,
+      cases h,
+    exact ⟨rfl, rfl⟩,
+  rintro ⟨rfl, rfl⟩,
+  refl,
+end
 
-lemma orb_true_iff (b₁ b₂ : bool)
+lemma bor_eq_true_eq_eq_tt_or_eq_tt (b₁ b₂ : bool)
   : b₁ || b₂ = tt ↔ b₁ = tt ∨ b₂ = tt :=
-by split; intro h; simp at *; exact h
+begin
+  split,
+    intro h,
+    cases b₁,
+      cases b₂,
+        cases h,
+      exact or.inr rfl,
+    exact or.inl rfl,
+  rintro (rfl | rfl),
+    refl,
+  cases b₁,
+    refl,
+  refl,
+end
 
 /-
 Theorem eqb_neq : ∀x y : nat,
@@ -1466,30 +1586,25 @@ Proof.
 -/
 
 /- how is this one star? -/
-
-theorem eqb_neq (x y : ℕ)
-  : x =? y = ff ↔ x ≠ y :=
+theorem eqb_neq : n =? m = ff ↔ n ≠ m :=
 begin
-  split; intro h,
-    simp at *,
-    by_contra c,
-    rw c at h,
-    simp at h,
-    contradiction,
-  simp at h,
-  induction x with x ih generalizing y,
-    cases y with y,
-      contradiction,
-    simp,
-  cases y with y,
-    simp,
-  have : ¬x = y,
-    by_contra c,
-    have : succ x = succ y,
-      exact congr_arg _ c,
-    contradiction,
-  simp,
-  exact ih y this,
+  split,
+    intro h,
+    rintro rfl,
+    rw eqb_refl n at h,
+    cases h,
+  intro c,
+  unfold not at c,
+  induction n with n ih generalizing m,
+    cases m,
+      cases c rfl,
+    refl,
+  cases m,
+    refl,
+  unfold eqb,
+  apply ih,
+  rintro rfl,
+  exact c rfl,
 end
 
 /-
@@ -1505,29 +1620,39 @@ Proof.
 (* FILL IN HERE *) Admitted.
 -/
 
-@[simp]
-def eqb_list {α : Type} (eqb : α → α → bool)
-  : list α → list α → bool
+def eqb_list (eqb : α → α → bool) : list α → list α → bool
 | [] [] := tt
 | (h₁::t₁) (h₂::t₂) := eqb h₁ h₂ && eqb_list t₁ t₂
 | _ _ := ff
 
-lemma eqb_list_true_iff {α : Type}
+lemma eqb_list_true_iff
   (eqb : α → α → bool)
-  (heq : ∀ a₁ a₂, eqb a₁ a₂ = tt ↔ a₁ = a₂)
+  (heq : ∀a₁ a₂, eqb a₁ a₂ = tt ↔ a₁ = a₂)
   (l₁ : list α)
   (l₂ : list α)
-  : eqb_list eqb l₁ l₂ ↔ l₁ = l₂ :=
+  : eqb_list eqb l₁ l₂ = tt ↔ l₁ = l₂ :=
 begin
-  split;
-    intro h;
-    induction l₁ with h₁ t₁ ih generalizing l₂;
-      cases l₂ with h₂ t₂;
-        simp;
-        simp at h;
-        try { contradiction },
-    exact ⟨(heq _ _).mp h.left, ih _ h.right⟩,
-  exact ⟨(heq _ _).mpr h.left, ih _ h.right⟩
+  split,
+    intro h,
+    induction l₁ with h₁ t₁ ih generalizing l₂,
+      cases l₂ with h₂ t₂,
+        refl,
+      cases h,
+    cases l₂ with h₂ t₂,
+      cases h,
+    unfold eqb_list at h,
+    rw band_eq_true_eq_eq_tt_and_eq_tt at h,
+    congr,
+      rw heq at h,
+      exact h.left,
+    exact ih _ h.right,
+  rintro rfl,
+  induction l₁ with h₁ t₁ ih,
+    refl,
+  unfold eqb_list,
+  rw ih,
+  rw (heq h₁ h₁).mpr rfl,
+  refl,
 end
 
 /-
@@ -1537,14 +1662,23 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem forallb_true_iff {α : Type} (p : α → bool) (l : list α)
-  : forallb p l = tt ↔ all (λ a, p a = tt) l :=
+theorem all_true_iff (p : α → bool) : l.all p = tt ↔ all (λa, p a = tt) l :=
 begin
-  split;
-    intro h;
-    induction l with _ _ ih;
-      simp at *;
-      contradiction <|> exact ⟨h.left, ih h.right⟩,
+  split,
+    intro h,
+    induction l with a l ih,
+      unfold all,
+    unfold all,
+    unfold list.all list.foldr at h,
+    rw band_eq_true_eq_eq_tt_and_eq_tt at h,
+    exact ⟨h.left, ih h.right⟩,
+  intro h,
+  induction l with a l ih,
+    refl,
+  unfold all at h,
+  unfold list.all list.foldr,
+  rw band_eq_true_eq_eq_tt_and_eq_tt,
+  exact ⟨h.left, ih h.right⟩,
 end
 
 /-
@@ -1552,7 +1686,7 @@ Definition excluded_middle := ∀P : Prop,
   P ∨ ¬P.
 -/
 
-def excluded_middle := ∀ p, p ∨ ¬p
+def classical.em := ∀P : Prop, P ∨ ¬P
 
 /-
 Theorem restricted_excluded_middle : ∀P b,
@@ -1564,8 +1698,14 @@ Proof.
 Qed.
 -/
 
-theorem restricted_excluded_middle (p : Prop) (b : bool) (h : p ↔ b = tt)
-  : p ∨ ¬p := by cases b; simp * at *
+theorem restricted_excluded_middle (b : bool) (h : P ↔ b = tt) : P ∨ ¬P :=
+begin
+  rw h,
+  cases b,
+    right,
+    rintro ⟨⟩,
+  exact or.inl rfl,
+end
 
 /-
 Theorem restricted_excluded_middle_eq : ∀(n m : nat),
@@ -1578,11 +1718,11 @@ Proof.
 Qed.
 -/
 
-theorem restricted_excluded_middle_eq (n m : ℕ) : n = m ∨ n ≠ m :=
+theorem restricted_excluded_middle_eq : n = m ∨ n ≠ m :=
 begin
-  apply restricted_excluded_middle (n = m) (n =? m),
+  apply @restricted_excluded_middle (n = m) (n =? m),
   symmetry,
-  apply eqb_eq,
+  exact eqb_eq,
 end
 
 /-
@@ -1592,21 +1732,14 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/-
-not sure if this technique has been used before in the book
--/
-
-theorem excluded_middle_irrefutable (p : Prop) : ¬¬(p ∨ ¬p) :=
+theorem excluded_middle_irrefutable (P : Prop) : ¬¬(P ∨ ¬P) :=
 begin
-  by_contradiction h,
-  have hnp : ¬p,
-    by_contradiction hp,
-    have c : p ∨ ¬p,
-      exact or.inl hp,
-    contradiction,
-  have c : p ∨ ¬p,
-    exact or.inr hnp,
-  contradiction,
+  intro h,
+  apply h,
+  right,
+  intro p,
+  apply h,
+  exact or.inl p,
 end
 
 /-
@@ -1618,15 +1751,14 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem not_exists_dist {α : Type}
-  (em : excluded_middle) (p : α → Prop) (h : ¬(∃a, ¬p a)) : ∀a, p a :=
+theorem not_exists_dist (em : classical.em) (p : α → Prop) (h : ¬(∃a, ¬p a))
+  : p a :=
 begin
-  intro a,
-  cases (em (p a)) with hp hnp,
+  cases em (p a) with hp hnp,
     exact hp,
   have c : ∃a, ¬p a,
     exact ⟨a, hnp⟩,
-  contradiction,
+  exact absurd h c,
 end
 
 /-
@@ -1643,16 +1775,73 @@ Definition implies_to_or := ∀P Q:Prop,
   (P→Q) → (¬P∨Q).
 -/
 
-/-
-TODO - peirce
--/
-
 /- peirce and peirce' are in core -/
-def peirce'' (p q : Prop) (h : (p → q) → p) := p
+def peirce := ∀P Q : Prop, ((P → Q) → P) → P
 
-def double_negation_elimination (p : Prop) (h : ¬¬p) := p
+def double_negation_elimination := ∀P : Prop, ¬¬P → P
 
-def de_morgan_not_and_not (p q : Prop) (h : ¬(¬p ∧ ¬q)) := p ∨ q
+def de_morgan_not_and_not := ∀P Q : Prop, ¬(¬P ∧ ¬Q) → P ∨ Q
 
-def implies_to_or (p q : Prop) (h : p → q) := ¬p ∨ q
+def implies_to_or := ∀P Q : Prop, (P → Q) → ¬P ∨ Q
 
+def em_iff_peirce : classical.em ↔ peirce :=
+begin
+  unfold classical.em peirce,
+  split,
+    intros em P Q h,
+    cases em P with p np,
+      exact p,
+    apply h,
+    intro p,
+    exact absurd np p,
+  intros peirce P,
+  apply peirce _ false,
+  intro h,
+  right,
+  intro p,
+  exact h (or.inl p),
+end
+
+def em_iff_dne : classical.em ↔ double_negation_elimination :=
+begin
+  unfold classical.em double_negation_elimination,
+  split,
+    intros em P nnp,
+    cases em P with p np,
+      exact p,
+    exact absurd nnp np,
+  intros dne P,
+  exact dne _ (excluded_middle_irrefutable P),
+end
+
+def em_iff_dmnn : classical.em ↔ de_morgan_not_and_not :=
+begin
+  unfold classical.em de_morgan_not_and_not,
+  split,
+    intros em P Q npq,
+    cases em P with p np,
+      exact or.inl p,
+    cases em Q with q nq,
+      exact or.inr q,
+    exact absurd npq ⟨np, nq⟩,
+  intros dmnn P,
+  apply dmnn,
+  rintro ⟨np, nnp⟩,
+  exact absurd nnp np,
+end
+
+def em_iff_tor : classical.em ↔ implies_to_or :=
+begin
+  unfold classical.em implies_to_or,
+  split,
+    intros em P Q hpq,
+    cases em P with p np,
+      exact or.inr (hpq p),
+    exact or.inl np,
+  intros tor P,
+  rw or.comm,
+  apply tor,
+  exact id,
+end
+
+end logic

@@ -183,7 +183,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem evenb_S (n : ℕ) : evenb (succ n) = bnot (evenb n) :=
+theorem evenb_succ (n : ℕ) : evenb (succ n) = bnot (evenb n) :=
 begin
   induction n with n ih,
     refl,
