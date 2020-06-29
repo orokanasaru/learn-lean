@@ -894,7 +894,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem count_member_nonzero (s : bag) : 1 <=? (count 1 (1 :: s)) = tt :=
+theorem count_member_nonzero (s : bag) : 1 ≤? (count 1 (1 :: s)) = tt :=
 begin
   induction s with n s ih,
     refl,
@@ -912,7 +912,7 @@ Proof.
     simpl. rewrite IHn'. reflexivity. Qed.
 -/
 
-theorem leb_succ (n : ℕ) : n <=? succ n = tt :=
+theorem leb_succ (n : ℕ) : n ≤? succ n = tt :=
 begin
   induction n with n ih,
     refl,
@@ -927,7 +927,7 @@ Proof.
 -/
 
 theorem count_remove_leb_count (s : bag)
-  : count 0 (remove_one 0 s) <=? count 0 s = tt :=
+  : count 0 (remove_one 0 s) ≤? count 0 s = tt :=
 begin
   induction s with h t ih,
     refl,

@@ -552,9 +552,9 @@ Proof. simpl. reflexivity. Qed.
 -/
 
 infix ` =? `:50 := eqb
-infix ` <=? `:50 := leb
+infix ` ≤? `:50 := leb
 
-example : (4 <=? 2) = ff := rfl
+example : (4 ≤? 2) = ff := rfl
 
 /-
 Definition ltb (n m : nat) : bool

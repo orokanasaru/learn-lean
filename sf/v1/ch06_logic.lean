@@ -14,7 +14,7 @@ namespace logic
 variables {α β γ : Type}
 variable {a : α}
 variables {P Q R : Prop}
-variables {n m o p : ℕ}
+variables {m n o p : ℕ}
 variables {l l' : list α}
 
 /-

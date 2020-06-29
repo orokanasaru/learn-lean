@@ -86,15 +86,18 @@ end
 Theorem mult_0_r : ∀n:nat,
   n * 0 = 0.
 Proof.
+
   (* FILL IN HERE *) Admitted.
 Theorem plus_n_Sm : ∀n m : nat,
   S (n + m) = n + (S m).
 Proof.
   (* FILL IN HERE *) Admitted.
+
 Theorem plus_comm : ∀n m : nat,
   n + m = m + n.
 Proof.
   (* FILL IN HERE *) Admitted.
+
 Theorem plus_assoc : ∀n m p : nat,
   n + (m + p) = (n + m) + p.
 Proof.
@@ -165,7 +168,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma double_plus (n : ℕ) : double n = n + n :=
+lemma double_add (n : ℕ) : double n = n + n :=
 begin
   induction n with n ih,
     refl,

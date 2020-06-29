@@ -1,6 +1,24 @@
 import tactic.basic
+import tactic.linarith
 import tactic.omega
 import .ch06_logic
+
+open nat (add_succ succ_add)
+open list (
+  filter nil_append append_nil foldr cons_append
+  append_assoc length_append ne_nil_of_length_pos
+)
+
+open basics (leb)
+open induction (double double_add)
+open logic (In in_app_iff eqb_eq eqb_neq)
+
+namespace indprop
+
+variables {α β γ : Type}
+variables {P Q : Prop}
+variables {a : α}
+variables {n m o p : ℕ}
 
 /-
 Inductive even : nat → Prop :=
@@ -8,11 +26,9 @@ Inductive even : nat → Prop :=
 | ev_SS (n : nat) (H : even n) : even (S (S n)).
 -/
 
-open nat
-
 inductive even : ℕ → Prop
 | ev_0 : even 0
-| ev_ss (n : ℕ) (h : even n) : even (succ (succ n))
+| ev_ss {n} (h : even n) : even (n + 2)
 
 open even
 
@@ -24,8 +40,6 @@ Fail Inductive wrong_ev (n : nat) : Prop :=
         as 1st argument in "wrong_ev 0". *)
 -/
 
-/- this explains a lot of behavior that we've seen so far -/
-
 -- inductive wrong_ev (n : ℕ) : Prop
 -- | wrong_ev_0 : wrong_ev 0
 -- | wrong_ev_ss : wrong_ev n → wrong_ev (succ (succ n))
@@ -36,16 +50,16 @@ Fail Inductive wrong_ev (n : nat) : Prop :=
   | ev_SS : ∀n, even n → even (S (S n)).
 -/
 
-inductive even' : ℕ → Prop
-| ev_0 : even' 0
-| ev_ss : ∀n, even' n → even' (succ (succ n))
+inductive even'' : ℕ → Prop
+| ev_0 : even'' 0
+| ev_ss : ∀n, even'' n → even'' (n + 2)
 
 /-
 Theorem ev_4 : even 4.
 Proof. apply ev_SS. apply ev_SS. apply ev_0. Qed.
 -/
 
-theorem ev_4 : even 4 :=
+theorem even_four : even 4 :=
 begin
   apply ev_ss,
   apply ev_ss,
@@ -57,7 +71,7 @@ Theorem ev_4' : even 4.
 Proof. apply (ev_SS 2 (ev_SS 0 ev_0)). Qed.
 -/
 
-theorem ev_4' : even 4 := ev_ss _ $ ev_ss _ ev_0
+theorem even_four' : even 4 := ev_ss $ ev_ss ev_0
 
 /-
 Theorem ev_plus4 : ∀n, even n → even (4 + n).
@@ -67,9 +81,8 @@ Proof.
 Qed.
 -/
 
-theorem ev_plus4 (n : ℕ) (h : even n) : even (4 + n) :=
+theorem even_add_four (h : even n) : even (n + 4) :=
 begin
-  rw add_comm,
   apply ev_ss,
   apply ev_ss,
   exact h,
@@ -82,11 +95,10 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem ev_double (n : ℕ) : even (double n) :=
+theorem even_double : even (double n) :=
 begin
   induction n with n ih,
-    simp [ev_0],
-  simp,
+    apply ev_0,
   apply ev_ss,
   exact ih,
 end
@@ -105,14 +117,16 @@ Proof.
 Qed.
 -/
 
-theorem ev_inversion (n : ℕ) (h : even n)
-  : (n = 0) ∨ (∃n', n = succ (succ n') ∧ even n') :=
+theorem even_inv (e : even n) : (n = 0) ∨ (∃n', n = n' + 2 ∧ even n') :=
 begin
-  cases h with n' h',
+  cases e with n' e',
     left,
     refl,
   right,
-  exact ⟨n', rfl, h'⟩,
+  use n',
+  split,
+    refl,
+  apply e',
 end
 
 /-
@@ -126,13 +140,11 @@ Proof.
 Qed.
 -/
 
-theorem ev_minus (n : ℕ) (h : even n) : even (pred (pred n)) :=
+theorem even_sub_two (e : even n) : even (n - 2) :=
 begin
-  cases h with n' h',
-    simp,
-    exact h,
-  simp,
-  exact h',
+  cases e with n' e',
+    exact e,
+  exact e',
 end
 
 /-
@@ -146,9 +158,7 @@ Proof.
 Abort.
 -/
 
-/- oh, cases is inversion, destruct is destruct... -/
-
--- theorem evss_ev (n : ℕ) (h : even (succ (succ n))) : even n :=
+-- theorem evss_ev (h : even (n + 2)) : even n :=
 -- begin
 --   destruct h,
 --   sorry,
@@ -163,19 +173,12 @@ Proof. intros n H. apply ev_inversion in H. destruct H.
 Qed.
 -/
 
-/- discriminate is injection, does not work here -/
-
-theorem evss_ev (n : ℕ) (h : even (succ (succ n))) : even n :=
+theorem add_two_even (e : even (n + 2)) : even n :=
 begin
-  have h, exact ev_inversion _ h,
-  cases h with h h,
-    injection h,
-  cases h with n' h,
-  cases h with hl hr,
-  injection hl with hl,
-  injection hl with hl,
-  rw hl,
-  exact hr,
+  replace e, exact even_inv e,
+  rcases e with ⟨⟨⟩⟩ | ⟨n', hn, he⟩,
+  injections with hn' heq,
+  rwa heq,
 end
 
 /-
@@ -189,10 +192,10 @@ Proof.
 Qed.
 -/
 
-theorem evss_ev' (n : ℕ) (h : even (succ (succ n))) : even n :=
+theorem add_two_even' (e : even (n + 2)) : even n :=
 begin
-  cases h with n' h',
-  exact h',
+  cases e with _ e',
+  exact e',
 end
 
 /-
@@ -208,26 +211,18 @@ Theorem one_not_even' : ¬even 1.
   intros H. inversion H. Qed.
 -/
 
-/- yikes -/
-
+/-
+TODO: see if this is the right time to introduce by_contra
+as a slightly more readable version of intro for negated statements
+-/
 theorem one_not_even : ¬even 1 :=
 begin
   by_contra h,
-  have h, exact ev_inversion 1 h,
-  cases h with h h,
-    simp at h,
-    contradiction,
-  cases h with n h,
-  cases h with hl hr,
-  injection hl with hl,
-  injection hl,
+  replace h, exact even_inv h,
+  rcases h with ⟨⟨⟩⟩ | ⟨_, ⟨⟩, _⟩,
 end
 
-theorem one_not_even' : ¬even 1 :=
-begin
-  by_contra h,
-  cases h,
-end
+theorem one_not_even' : ¬even 1 := by rintro ⟨⟩
 
 /-
 Theorem SSSSev__even : ∀n,
@@ -236,11 +231,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- gotta f around sometimes -/
-
-theorem ssssev_even (n : ℕ) (h : even (succ (succ (succ (succ n)))))
-  : even n :=
-by repeat { exact h <|> cases h with h h }
+theorem add_four_even (h : even (n + 4)) : even n :=
+begin
+  apply add_two_even,
+  apply add_two_even,
+  exact h,
+end
 
 /-
 Theorem even5_nonsense :
@@ -250,7 +246,10 @@ Proof.
 -/
 
 theorem even5_nonsense (h : even 5) : 2 + 2 = 9 :=
-by repeat { contradiction <|> cases h with h h }
+begin
+  replace h, exact add_four_even h,
+  cases h,
+end
 
 /-
 TODO: go back to tactics and use destruct?
@@ -270,19 +269,15 @@ Proof.
   intros n contra. inversion contra. Qed.
 -/
 
-/- does not appear to do injection -/
+/- cases does not do injection in lean -/
 
-theorem inversion_ex₁ (n m o : ℕ) (h : [n, m] = [o, o])
-  : [n] = [m] :=
+theorem inversion_ex₁ (h : [n, m] = [o, o]) : [n] = [m] :=
 begin
   cases h,
   injection h,
 end
 
-/- injection h also works... -/
-
-theorem inversion_ex₂ (n : ℕ) (h : succ n = 0)
-  : 2 + 2 = 5 := by cases h
+theorem inversion_ex₂ (h : n + 1 = 0) : 2 + 2 = 5 := by cases h
 
 /- Lemma ev_even_firsttry : ∀n,
   even n → ∃k, n = double k.
@@ -299,18 +294,15 @@ Proof.
 Abort.
 -/
 
--- lemma ev_evn_firstry (n : ℕ) (h : even n)
---   : ∃k, n = double k :=
+-- lemma ev_even_firstry (e : even n): ∃k, n = double k :=
 -- begin
---   cases h with n' h',
+--   cases e with n' e',
 --     exact ⟨0, rfl⟩,
---   have i : (∃k', n' = double k') →
---            (∃k, succ (succ n') = double k),
---     intro hk',
---     cases hk' with k' hk',
+--   have i : (∃k', n' = double k') → (∃k, n' + 2 = double k),
+--     rintro ⟨k', hk'⟩,
 --     rw hk',
---     exact ⟨succ k', rfl⟩,
---     sorry
+--     exact ⟨k' + 1, rfl⟩,
+--   sorry,
 -- end
 
 /-
@@ -328,14 +320,13 @@ Proof.
 Qed.
 -/
 
-lemma ev_even (n : ℕ) (h : even n)
-  : ∃k, n = double k :=
+lemma even_even (e : even n) : ∃k, n = double k :=
 begin
-  induction h with n' h' ih,
+  induction e with n' e' ih,
     exact ⟨0, rfl⟩,
   cases ih with k' hk',
   rw hk',
-  exact ⟨succ k', rfl⟩,
+  exact ⟨k' + 1, rfl⟩,
 end
 
 /-
@@ -348,16 +339,14 @@ Proof.
 Qed.
 -/
 
-/- mixing term and tactics, why not -/
-
-theorem ev_even_iff (n : ℕ)
-  : even n ↔ ∃k, n = double k :=
-⟨ev_even n, begin
-  intro h,
-  cases h with k hk,
+theorem even_iff_even : even n ↔ ∃k, n = double k :=
+begin
+  split,
+    apply even_even,
+  rintro ⟨k, hk⟩,
   rw hk,
-  apply ev_double,
-end⟩
+  apply even_double,
+end
 
 /-
 Theorem ev_sum : ∀n m, even n → even m → even (n + m).
@@ -365,12 +354,13 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem ev_sum (n m : ℕ) (hn : even n) (hm : even m) : even (n + m) :=
+theorem even_sum (hn : even n) (hm : even m) : even (n + m) :=
 begin
   induction hn with n' hn' ih,
-    simp *,
-  simp,
-  exact ev_ss _ ih,
+    rw add_comm,
+    exact hm,
+  rw [succ_add, succ_add],
+  exact ev_ss ih,
 end
 
 /-
@@ -380,12 +370,12 @@ Inductive even' : nat → Prop :=
 | even'_sum n m (Hn : even' n) (Hm : even' m) : even' (n + m).
 -/
 
-inductive even'' : ℕ → Prop
-| even''_0 : even'' 0
-| even''_2 : even'' 2
-| even''_sum n m (hn : even'' n) (hm : even'' m) : even'' (n + m)
+inductive even' : ℕ → Prop
+| even'_0 : even' 0
+| even'_2 : even' 2
+| even'_sum {n m} (hn : even' n) (hm : even' m) : even' (n + m)
 
-open even''
+open even'
 
 /-
 Theorem even'_ev : ∀n, even' n ↔ even n.
@@ -393,18 +383,18 @@ Proof.
  (* FILL IN HERE *) Admitted.
 -/
 
-/- 4* ? -/
-
-theorem even''_ev (n : ℕ) : even'' n ↔ even n :=
+theorem even'_ev : even' n ↔ even n :=
 begin
-  split; intro h,
+  split,
+    intro h,
     induction h with n' m' hn' hm' ihn ihm,
         exact ev_0,
-      exact ev_ss _ ev_0,
-    exact ev_sum _ _ ihn ihm,
+      exact ev_ss ev_0,
+    exact even_sum ihn ihm,
+  intro h,
   induction h with n' hn' ih,
-    exact even''_0,
-  exact even''_sum _ _ ih even''_2,
+    exact even'_0,
+  exact even'_sum ih even'_2,
 end
 
 /-
@@ -414,12 +404,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem ev_ev__ev (n m) (hnm : even (n + m)) (hn : even n) : even m :=
+theorem even_add_even (hnm : even (n + m)) (hn : even n) : even m :=
 begin
   induction hn with n' hn' ih,
-    simp * at *,
-  simp at hnm,
-  exact ih (evss_ev _ hnm),
+    rwa zero_add at hnm,
+  rw [succ_add, succ_add] at hnm,
+  exact ih (add_two_even hnm),
 end
 
 /-
@@ -429,17 +419,19 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem ev_plus_plus (n m p) (hnm : even (n + m)) (hnp : even (n + p))
-  : even (m + p) :=
+/-
+TODO: is this a good spot to introduce ac_refl?
+-/
+
+theorem even_add_add (hnm : even (n + m)) (hnp : even (n + p)) : even (m + p) :=
 begin
-  have h₁, exact ev_sum _ _ hnm hnp,
-  have : (n + m + (n + p)) = ((n + n) + (m + p)),
-    ac_refl, /- sexy -/
+  have h₁, exact even_sum hnm hnp,
+  have : ((n + m) + (n + p)) = ((n + n) + (m + p)), ac_refl,
   rw this at h₁,
   have h₂ : even (n + n),
-    rw ←double_plus,
-    apply ev_double,
-  exact ev_ev__ev _ _ h₁ h₂,
+    rw ←double_add,
+    apply even_double,
+  exact even_add_even h₁ h₂,
 end
 
 /-
@@ -450,13 +442,13 @@ Inductive le : nat → nat → Prop :=
 Notation "m ≤ n" := (le m n).
 -/
 
-inductive le : ℕ → ℕ → Prop
-| le_n (n : ℕ) : le n n
-| le_s {n m} (h : le n m) : le n (succ m)
+inductive le (n : ℕ) : ℕ → Prop
+| refl : le n
+| step {m} (h : le m) : le (m + 1)
 
 open le
 
-infix ` ≤' `:50 := le
+local infix ≤ := le
 
 /-
 Theorem test_le1 :
@@ -478,26 +470,18 @@ Proof.
   intros H. inversion H. inversion H2. Qed.
 -/
 
-theorem test_le₁ : 3 ≤' 3 := le_n 3
+theorem test_le₁ : 3 ≤ 3 := refl
 
-/-
-yeah, as long as you define it right
-this solves a lot
--/
-theorem test_le₂ : 3 ≤' 6 := by repeat {constructor}
-
-/-
-TODO, need to figure out how to use case for naming
--/
-
-theorem test_le₃ (h : 2 ≤' 1) : 2 + 2 = 5 :=
+theorem test_le₂ : 3 ≤ 6 :=
 begin
-  with_cases { cases h },
-  case : h {
-    cases h,
-  },
+  apply step,
+  apply step,
+  apply step,
+  exact refl,
 end
 
+theorem test_le₃ (h : 2 ≤ 1) : 2 + 2 = 5 :=
+by rcases h with _ | ⟨_, _, ⟨⟩⟩
 
 /-
 Definition lt (n m:nat) := le (S n) m.
@@ -505,9 +489,9 @@ Definition lt (n m:nat) := le (S n) m.
 Notation "m < n" := (lt m n).
 -/
 
-def lt (n m) := le (succ n) m
+def lt (n m) := le (n + 1) m
 
-infix ` <' `:50 := lt
+local infix < := lt
 
 /-
 Inductive square_of : nat → nat → Prop :=
@@ -525,16 +509,16 @@ inductive square_of : ℕ → ℕ → Prop
 | sq (n : ℕ) : square_of n (n * n)
 
 inductive next_nat : ℕ → ℕ → Prop
-| nn (n : ℕ) : next_nat n (succ n)
+| nn (n : ℕ) : next_nat n (n + 1)
 
 inductive next_even : ℕ → ℕ → Prop
-| ne_1 (n : ℕ) : even (succ n) → next_even n (succ n)
-| ne_2 (n) (h : even (succ (succ n))) : next_even n (succ (succ n))
+| ne_1 {n} : even (n + 1) → next_even n (n + 1)
+| ne_2 {n} (h : even (n + 2)) : next_even n (n + 2)
 
 inductive total_relation : ℕ → ℕ → Prop
 | intro (n₁ n₂) : total_relation n₁ n₂
 
-inductive empty_relation' : ℕ → ℕ → Prop
+inductive empty_relation : ℕ → ℕ → Prop
 
 /-
 Lemma le_trans : ∀m n o, m ≤ n → n ≤ o → m ≤ o.
@@ -580,80 +564,71 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma le_trans' {m n o : ℕ} (hmn : m ≤' n) (hno : n ≤' o) : m ≤' o :=
+lemma le_trans (hmn : m ≤ n) (hno : n ≤ o) : m ≤ o :=
 begin
-  induction hno with n' n' o' hno' ih,
+  induction hno with o' hno' ih,
     exact hmn,
-  exact le_s (ih hmn),
+  exact step ih,
 end
 
-theorem z_le_n (n : ℕ) : 0 ≤' n :=
+theorem zero_le : 0 ≤ n :=
 begin
   induction n with n' ih,
-    exact le_n 0,
-  exact le_s ih,
+    exact refl,
+  exact step ih,
 end
 
-theorem n_le_m__sn_le_sm {n m : ℕ} (h : n ≤' m) : succ n ≤' succ m :=
+/-
+TODO: i used this earlier
+-/
+theorem nat.succ_le_succ (h : n ≤ m) : n + 1 ≤ m + 1 :=
 begin
-  induction h with n' n' m' h' ih,
-    constructor,
-  exact le_s ih,
+  induction h with m' h' ih,
+    exact refl,
+  exact step ih,
 end
 
-/- this sucked -/
-/- why does induction destroy information -/
-
-theorem sn_le_sm__n_le_m {n m : ℕ} (h : succ n ≤' succ m) : n ≤' m :=
+/-
+TODO: i used this earlier
+-/
+theorem nat.le_of_succ_le_succ (h : n + 1 ≤ m + 1) : n ≤ m :=
 begin
-  cases h with n m n h',
-    constructor,
-  /-
-  TODO - why tf can i not use case label renaming here
-  -/
-  exact le_trans' (le_s (le_n n)) h',
+  rcases h with _ | ⟨m, h⟩,
+    exact refl,
+  exact le_trans (step refl) h,
 end
 
-theorem le_plus_l (a b : ℕ) : a ≤' a + b :=
+theorem nat.le_add_right : n ≤ n + m :=
 begin
-  induction b with b' ihb,
+  induction m with m ih,
     rw add_zero,
-    constructor,
-  exact le_s ihb,
+    exact refl,
+  exact step ih,
 end
 
-theorem plus_lt {n₁ n₂ m} (h : n₁ + n₂ <' m) : n₁ <' m ∧ n₂ <' m :=
+theorem add_lt (h : n + m < o) : n < o ∧ m < o :=
 begin
-  unfold lt at *,
-  have : ∀ n m, succ n ≤' succ (n + m),
+  have : ∀n m, n + 1 ≤ n + m + 1,
     intros n m,
-    rw ←plus_Sn_m,
-    exact le_plus_l _ _,
+    rw add_assoc,
+    rw add_comm m,
+    rw ←add_assoc,
+    exact nat.le_add_right,
   split,
-    exact le_trans' (this n₁ n₂) h,
-  rw plus_comm at h,
-  exact le_trans' (this n₂ n₁) h,
+    exact le_trans (this n m) h,
+  rw add_comm at h,
+  exact le_trans (this m n) h,
 end
 
-theorem ls_s {n m} (h : n <' m) : n <' succ m :=
-begin
-  unfold lt at *,
-  exact le_s h,
-end
+theorem lt_lt_succ (h : n < m) : n < m + 1 := step h
 
-/- so easy in function mode -/
-/- need to get it to work in tactics -/
-/- lol, not sure why that was hard -/
-
-theorem leb_complete {n m} (h : n <=? m = tt) : n ≤' m :=
+theorem leb_complete (h : n ≤? m = tt) : n ≤ m :=
 begin
-  induction n with n' ih generalizing m,
-    exact z_le_n m,
-  cases m with m',
-    simp at h,
-    contradiction,
-  simp at h,
-  exact n_le_m__sn_le_sm (ih h)
+  induction n with n ih generalizing m,
+    exact zero_le,
+  cases m with m,
+    cases h,
+  exact nat.succ_le_succ (ih h),
 end
 
 /-
@@ -664,23 +639,14 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- honestly no real difference between n and m-/
-
-theorem leb_correct {n m} (h : n ≤' m) : n <=? m = tt :=
+theorem leb_correct (h : n ≤ m) : n ≤? m = tt :=
 begin
-  induction m with m' ih generalizing n,
-  cases h; refl,
-  cases n; unfold leb,
-  exact ih (sn_le_sm__n_le_m h),
-end
-
-theorem leb_correct' {n m} (h : n ≤' m) : n <=? m = tt :=
-begin
-  induction n with n' ih generalizing m,
-    cases m; unfold leb,
-  cases m,
-    cases h,
-  exact ih (sn_le_sm__n_le_m h),
+  induction m with m ih generalizing n,
+  cases h,
+    refl,
+  cases n,
+    refl,
+  exact ih (nat.le_of_succ_le_succ h),
 end
 
 /-
@@ -690,10 +656,8 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem leb_true_trans {n m o}
-  (hnm : n <=? m = tt) (hmo : m <=? o = tt)
-  : n <=? o = tt :=
-leb_correct (le_trans' (leb_complete hnm) (leb_complete hmo))
+theorem leb_tt_trans (hnm : n ≤? m = tt) (hmo : m ≤? o = tt)
+  : n ≤? o = tt := leb_correct (le_trans (leb_complete hnm) (leb_complete hmo))
 
 /-
 Theorem leb_iff : ∀n m,
@@ -705,9 +669,7 @@ Proof.
 /- if you didn't do the last section -/
 /- you're gonna have a bad time -/
 
-theorem leb_iff {n m : ℕ} :
-  n <=? m = tt ↔ n ≤' m :=
-⟨leb_complete, leb_correct⟩
+theorem leb_iff : n ≤? m = tt ↔ n ≤ m := ⟨leb_complete, leb_correct⟩
 
 /-
 Inductive R : nat → nat → nat → Prop :=
@@ -720,9 +682,9 @@ Inductive R : nat → nat → nat → Prop :=
 
 inductive R : ℕ → ℕ → ℕ → Prop
 | c₁ : R 0 0 0
-| c₂ {m n o} (h : R m n o) : R (succ m) n (succ o)
-| c₃ {m n o} (h : R m n o) : R m (succ n) (succ o)
-| c₄ {m n o} (h : R (succ m) (succ n) (succ (succ o))) : R m n o
+| c₂ {m n o} (h : R m n o) : R (m + 1) n (o + 1)
+| c₃ {m n o} (h : R m n o) : R m (n + 1) (o + 1)
+| c₄ {m n o} (h : R (m + 1) (n + 1) (o + 2)) : R m n o
 | c₅ {m n o} (h : R m n o) : R n m o
 
 open R
@@ -736,57 +698,63 @@ Proof.
 (* FILL IN HERE *) Admitted.
 -/
 
-def fR := λ (m n : ℕ), m + n
-
-lemma add_m_n_z : ∀ {m n}, m + n = 0 → m = 0 ∧ n = 0
-| 0 0 h := ⟨rfl, rfl⟩
-| (m + 1) _ h := by rw plus_Sn_m at h; contradiction
+def fR := λ(m n : ℕ), m + n
 
 /-
 recommended - tricky induction
 make fun of coq destruction naming (for once)
 -/
 
+lemma add_eq_zero : ∀{m n}, m + n = 0 → m = 0 ∧ n = 0
+| 0 0 h := ⟨rfl, rfl⟩
+| (m + 1) n h :=
+begin
+  rw succ_add at h,
+  cases h,
+end
+
+
 theorem R_equiv_fR {m n o : ℕ} : R m n o ↔ fR m n = o :=
 begin
-  split; intro h,
+  split,
+    intro h,
     induction h,
     case c₁ : { refl },
     case c₂ : m' n' o' h ih {
-      unfold fR at *,
-      rw plus_Sn_m,
+      unfold fR at ih ⊢,
+      rw succ_add,
       rw ih,
     },
     case c₃ : m' n' o' h ih {
-      unfold fR at *,
-      have : m' + succ n' = succ (m' + n'),
-        refl,
+      unfold fR at ih ⊢,
+      have : m' + (n' + 1) = m' + n' + 1, refl,
       rw this,
       rw ih,
     },
     case c₄ : m' n' o' h ih {
-      unfold fR at *,
-      simp at ih,
-      injection ih,
+      unfold fR at ih ⊢,
+      have : m' + 1 + (n' + 1) = m' + n' + 1 + 1, ac_refl,
+      rw this at ih,
+      injections,
     },
     case c₅ : m' n' o' h ih {
-      unfold fR at *,
+      unfold fR at ih ⊢,
       rwa add_comm,
     },
-  induction o with o' ihm generalizing m n,
-    unfold fR at h,
-    have h, exact add_m_n_z h,
+  intro h,
+  unfold fR at h,
+  induction o with o ih generalizing m n,
+    have h, exact add_eq_zero h,
     rw [h.left, h.right],
     exact c₁,
-  unfold fR at *,
   cases m,
     cases n,
-      contradiction,
+      cases h,
     injection h with h,
-    exact c₃ (ihm h),
-  rw plus_Sn_m at h,
+    exact c₃ (ih h),
+  rw succ_add at h,
   injection h with h,
-  exact c₂ (ihm h),
+  exact c₂ (ih h),
 end
 
 /-
@@ -811,23 +779,25 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-inductive subseq : list ℕ → list ℕ → Prop
+/-
+starting generic since it's useful later
+-/
+
+inductive subseq : list α → list α → Prop
 | em : subseq [] []
-| cr {l₁ l₂} (n : ℕ) (h : subseq l₁ l₂) : subseq l₁ (n::l₂)
-| cl {l₁ l₂} (n : ℕ) (h : subseq l₁ l₂) : subseq (n::l₁) (n::l₂)
+| cr {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq l₁ (a::l₂)
+| cl {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq (a::l₁) (a::l₂)
 
 open subseq
 
-theorem subseq_refl (l : list ℕ) : subseq l l :=
+theorem subseq_refl (l : list α) : subseq l l :=
 begin
   induction l with h t ih,
     exact em,
   exact cl h ih,
 end
 
-open list
-
-theorem subseq_app (l₁ l₂ l₃ : list ℕ) (h : subseq l₁ l₂)
+theorem subseq_app (l₁ l₂ l₃ : list α) (h : subseq l₁ l₂)
   : subseq l₁ (l₂ ++ l₃) :=
 begin
   induction h,
@@ -841,9 +811,7 @@ begin
   case cl : l₁' l₂' n h' ih { exact cl n ih },
 end
 
-/- i think i got lucky -/
-
-theorem subseq_trans {l₁ l₂ l₃}
+theorem subseq_trans {l₁ l₂ l₃ : list α}
   (h₁₂ : subseq l₁ l₂) (h₂₃ : subseq l₂ l₃) : subseq l₁ l₃ :=
 begin
   induction h₂₃ generalizing l₁,
@@ -867,11 +835,30 @@ Inductive R : nat → list nat → Prop :=
 -/
 
 inductive R' : ℕ → list ℕ → Prop
-| c₁ : R' 0 []
-| c₂ : ∀ n l, R' n l → R' (succ n) (n :: l)
-| c₃ : ∀ n l, R' (succ n) l → R' n l
+| c₁' : R' 0 []
+| c₂' : ∀{n l}, R' n l → R' (n + 1) (n :: l)
+| c₃' : ∀{n l}, R' (n + 1) l → R' n l
 
-/-its a safe vec index-/
+open R'
+
+example : R' 2 [1, 0] :=
+begin
+  apply c₂',
+  apply c₂',
+  exact c₁',
+end
+
+example : R' 1 [1, 2, 1, 0] :=
+begin
+  apply c₃',
+  apply c₂',
+  apply c₃',
+  apply c₃',
+  apply c₂',
+  apply c₂',
+  apply c₂',
+  apply c₁',
+end
 
 /-
 Inductive reg_exp {T : Type} : Type :=
@@ -883,7 +870,7 @@ Inductive reg_exp {T : Type} : Type :=
   | Star (r : reg_exp).
 -/
 
-inductive reg_exp (α : Type) : Type
+inductive reg_exp : Type
 | EmptySet : reg_exp
 | EmptyStr : reg_exp
 | Char (a : α) : reg_exp
@@ -914,49 +901,23 @@ Inductive exp_match {T} : list T → reg_exp → Prop :=
                  exp_match (s1 ++ s2) (Star re).
 -/
 
-/-
-we've hit a wall -
-cases can't use exp_match with ++
-list.append is not a constructor
-seeing how far we can get with ropes
--/
-
--- inductive rope (α : Type)
--- | nil : rope
--- | cons (a : α) (r : rope) : rope
--- | app (r₁ r₂ : rope) : rope
-
--- open rope
-
--- infix ` ::' `:67  := cons
--- notation `[` l:(foldr `, ` (h t, cons h t) nil `]'`) := l
--- infix ` ++' `:65 := app
-
--- def append {α : Type} : rope α → rope α → rope α
--- | []' []' := []'
--- | []' r := r
--- | (h::'t) r := h::'(append t r)
--- | (h ++' t) r := append h (append t
-
--- instance {α : Type} : has_append (rope α) :=
--- ⟨append⟩
-
-inductive exp_match {α : Type} : reg_exp α → list α → Prop
-| MEmpty : exp_match EmptyStr []
-| MChar (a : α) : exp_match (Char a) [a]
-| MApp {s₁ re₁ s₂ re₂} (h₁ : exp_match re₁ s₁) (h₂ : exp_match re₂ s₂)
-  : exp_match (App re₁ re₂) (s₁ ++ s₂)
-| MUnionL {s₁ re₁} re₂ (h : exp_match re₁ s₁)
-  : exp_match (Union re₁ re₂) s₁
-| MUnionR re₁ {s₂ re₂} (h : exp_match re₂ s₂)
-  : exp_match (Union re₁ re₂) s₂
-| MStar0 (re : reg_exp α) : exp_match (Star re) []
+inductive exp_match : list α → @reg_exp α → Prop
+| MEmpty : exp_match [] EmptyStr
+| MChar (a : α) : exp_match [a] (Char a)
+| MApp {s₁ re₁ s₂ re₂} (h₁ : exp_match s₁ re₁) (h₂ : exp_match s₂ re₂)
+  : exp_match (s₁ ++ s₂) (App re₁ re₂)
+| MUnionL {s₁ re₁} re₂ (h : exp_match s₁ re₁) : exp_match s₁ (Union re₁ re₂)
+| MUnionR re₁ {s₂ re₂} (h : exp_match s₂ re₂) : exp_match s₂ (Union re₁ re₂)
+| MStar0 (re : reg_exp) : exp_match [] (Star re)
 | MStarApp {s₁ s₂ re}
-  (h₁ : exp_match re s₁)
-  (h₂ : exp_match (Star re) s₂)
-  : exp_match (Star re) (s₁ ++ s₂)
+  (h₁ : exp_match s₁ re)
+  (h₂ : exp_match s₂ (Star re))
+  : exp_match (s₁ ++ s₂) (Star re)
 
 open exp_match
+
+variables {s s₁ s₂ : list α}
+variables {re re₀ re₁ re₂ : @reg_exp α}
 
 /-
 Notation "s =~ re" := (exp_match s re) (at level 80).
@@ -978,10 +939,9 @@ Proof.
 Qed.
 -/
 
-example : Char 1 =~ [1] := MChar 1
+example : [1] =~ Char 1 := MChar 1
 
-example : App (Char 1) (Char 2) =~ [1,2] :=
-MApp (MChar 1) (MChar 2)
+example : [1, 2] =~ App (Char 1) (Char 2) := MApp (MChar 1) (MChar 2)
 
 /-
 Example reg_exp_ex3 : ¬([1; 2] =~ Char 1).
@@ -990,33 +950,16 @@ Proof.
 Qed.
 -/
 
-/- works due to swapping order -/
-
-example : ¬(Char 1 =~ [1, 2]) :=
-begin
-  by_contra c,
-  cases c,
-end
-
-/- can do cases on a variable -/
 /-
-this is the first compat break that made me
-consider a forum post.
-also had me reaching for coq to compare
+TODO: lean can't make it to the remember section
+before needing generalize
 -/
 
-example : ¬(∃c, App (Char 1) (Char 2) =~ c ∧ c.length = 1) :=
+example : ¬([1, 2] =~ Char 1) :=
 begin
-  by_contra c,
-  cases c with w c,
-  cases c with cl cr,
-  /- not sure why i can't use case after -/
-  cases cl with _ s₁ re₁ s₂ re₂ h₁ h₂,
-  cases h₁,
-  cases h₂,
-  simp at cr,
-  injection cr with c,
-  contradiction,
+  generalize heq : [1, 2] = s,
+  with_cases { rintro ⟨_⟩ },
+  rintro ⟨⟩,
 end
 
 /-
@@ -1038,11 +981,11 @@ Proof.
 Qed.
 -/
 
-def reg_exp_of_list {α} : list α → reg_exp α
+def reg_exp_of_list : list α → @reg_exp α
 | [] := EmptyStr
-| (h::t) := App (Char h) (reg_exp_of_list t)
+| (a::l) := App (Char a) (reg_exp_of_list l)
 
-example : reg_exp_of_list [1,2,3] =~ [1,2,3] :=
+example : [1, 2, 3] =~ reg_exp_of_list [1, 2, 3] :=
 begin
   apply @MApp _ [1],
     apply MChar,
@@ -1067,8 +1010,7 @@ Proof.
 Qed.
 -/
 
-lemma MStar1 {α s} {re : reg_exp α} (h : re =~ s)
-  : Star re =~ s :=
+lemma MStar₁ (h : s =~ re) : s =~ Star re :=
 begin
   rw ←append_nil s,
   exact MStarApp h (MStar0 re),
@@ -1087,14 +1029,9 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma empty_is_empty {α} (s : list α) : ¬(EmptySet =~ s) :=
-begin
-  by_contra c,
-  cases c,
-end
+lemma empty_is_empty : ¬(s =~ EmptySet) := by rintro ⟨⟩
 
-lemma MUnion' {α} (s : list α) (re₁ re₂)
-  (h : re₁ =~ s ∨ re₂ =~ s) : Union re₁ re₂ =~ s :=
+lemma MUnion' (h : s =~ re₁ ∨ s =~ re₂) : s =~ Union re₁ re₂ :=
 begin
   cases h,
     exact MUnionL re₂ h,
@@ -1109,28 +1046,16 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- In is actually in the logic chapter -/
-
-open list
-
-lemma MStar' {α} (ss) (re : reg_exp α) (h : ∀s, In s ss → re =~ s)
-  : Star re =~ foldr append [] ss :=
+lemma MStar' (ss) (h : ∀{s : list α}, In s ss → s =~ re)
+  : ss.foldr append [] =~ Star re :=
 begin
-  induction ss with hd tl ih,
-    dsimp only [foldr],
+  induction ss with s' ss ih,
     exact MStar0 re,
-  simp at *,
-  have f : re =~ hd,
-    have, exact h hd,
-    simp at this,
-    exact this,
-  have g : Star re =~ foldr append nil tl,
-    have : (∀ s, hd = s ∨ In s tl → re =~ s) → (∀ s, In s tl → re =~ s),
-      intros h s h',
-      have, exact h s,
-      exact this (or.inr h'),
-    exact ih (this h),
-  exact MStarApp f g,
+  apply MStarApp,
+    exact h (or.inl rfl),
+  apply ih,
+  intros s h',
+  exact h (or.inr h'),
 end
 
 /-
@@ -1140,38 +1065,38 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- the coq version for → is so much simpler -/
-
-lemma reg_exp_of_list_spec {α} (s₁ s₂ : list α)
-  : reg_exp_of_list s₂ =~ s₁ ↔ s₁ = s₂ :=
+lemma reg_exp_of_list_spec : s₁ =~ reg_exp_of_list s₂ ↔ s₁ = s₂ :=
 begin
   split,
     intro h,
-    induction s₂ with h₂ t₂ ih₂ generalizing s₁,
-      simp [reg_exp_of_list] at h,
+    induction s₂ with a₂ s₂ ih₂ generalizing s₁,
       cases h,
       refl,
-    simp [reg_exp_of_list] at h,
-    generalize heq : App (Char h₂) (reg_exp_of_list t₂) = re',
+    generalize heq : reg_exp_of_list (a₂::s₂) = re',
     rw heq at h,
     cases h,
-    all_goals { try { contradiction }},
-    case MApp : s₁' re₁ s₂' re₂ h₁' h₂' {
-      injection heq with h₁'' h₂'',
-      rw ←h₂'' at h₂',
-      rw ←h₁'' at h₁',
-      cases h₁',
-      simp,
-      exact ih₂ _ h₂',
+    case MEmpty { cases heq, },
+    case MChar : a { cases heq, },
+    case MApp : s₁ re₁ s₂' re₂ h₁ h₂ {
+      injection heq with h₁' h₂',
+      rw ←h₁' at h₁,
+      rw ←h₂' at h₂,
+      cases h₁,
+      unfold list.append,
+      congr,
+      exact ih₂ h₂,
     },
+    case MUnionL : s₁ re₁ re₂ h { cases heq, },
+    case MUnionR : re₁ s₂' re₂ h { cases heq, },
+    case MStar0 : re { cases heq, },
+    case MStarApp : s₁ s₂' re { cases heq, },
   intro h,
-  induction s₂ with h₂ t₂ ih₂ generalizing s₁,
-    simp [reg_exp_of_list],
+  induction s₂ with a₂ s₂ ih₂ generalizing s₁,
     rw h,
     exact MEmpty,
-  simp [reg_exp_of_list],
   rw h,
-  exact MApp (MChar h₂) (ih₂ t₂ rfl),
+  unfold reg_exp_of_list,
+  exact MApp (MChar a₂) (ih₂ rfl),
 end
 
 /-
@@ -1186,7 +1111,7 @@ Fixpoint re_chars {T} (re : reg_exp) : list T :=
   end.
 -/
 
-def re_chars {α} : reg_exp α → list α
+def re_chars : reg_exp → list α
 | EmptySet := []
 | EmptyStr := []
 | (Char a) := [a]
@@ -1235,24 +1160,23 @@ Proof.
 Qed.
 -/
 
-theorem in_re_match {α} (s : list α) (re : reg_exp α) (a : α)
-  (hm : re =~ s) (hi : In a s) : In a (re_chars re) :=
+theorem in_re_match (hm : s =~ re) (hi : In a s) : In a (re_chars re) :=
 begin
   induction hm,
   case MEmpty { apply hi, },
   case MChar { apply hi, },
   case MApp : s₁ re₁ s₂ re₂ h₁ h₂ ih₁ ih₂ {
-    dsimp only [re_chars],
+    unfold re_chars,
     rw in_app_iff at *,
     exact or.imp ih₁ ih₂ hi,
   },
   case MUnionL : s₁ re₁ re₂ h ih {
-    dsimp only [re_chars],
+    unfold re_chars,
     rw in_app_iff,
     exact or.inl (ih hi),
   },
   case MUnionR : s₁ re₁ re₂ h ih {
-    dsimp only [re_chars],
+    unfold re_chars,
     rw in_app_iff,
     exact or.inr (ih hi),
   },
@@ -1277,56 +1201,58 @@ Proof.
 
 /- yep, the lemma found errors in my first two attempts -/
 
-def re_not_empty {α} (re : reg_exp α) : bool :=
-begin
-  induction re,
-  case EmptySet { exact ff, },
-  case EmptyStr { exact tt, },
-  case Char { exact tt, },
-  case App : re₁ re₂ ih₁ ih₂ { exact ih₁ && ih₂, },
-  case Union : re₁ re₂ ih₁ ih₂ { exact ih₁ || ih₂, },
-  case Star { exact tt, },
-end
+def re_not_empty : @reg_exp α → bool
+| EmptySet := ff
+| EmptyStr := tt
+| (Char _) := tt
+| (App re₁ re₂) := re_not_empty re₁ && re_not_empty re₂
+| (Union re₁ re₂) := re_not_empty re₁ || re_not_empty re₂
+| (Star _) := tt
 
-lemma re_not_empty_correct {α} (re : reg_exp α)
-  : (∃s, re =~ s) ↔ re_not_empty re = tt :=
+/-
+TODO: file issues for dsimp and unfold breaking tags
+-/
+lemma re_not_empty_correct : (∃s, s =~ re) ↔ re_not_empty re = tt :=
 begin
-  split; intro h,
+  split,
     /- braces so all_goals doesn't affect other direction -/
-    cases h with w h, {
+    rintro ⟨w, h⟩, {
     induction h,
-      /- dsimp breaks cases. rw and simp don't -/
-      all_goals { rw [re_not_empty], },
+      case MEmpty { rw re_not_empty, },
+      case MChar : a { rw re_not_empty, },
       case MApp : s₁ re₁ s₂ re₂ h₁ h₂ ih₁ ih₂ {
-        rw [band_eq_true_eq_eq_tt_and_eq_tt],
-        show re_not_empty re₁ = tt ∧ re_not_empty re₂ = tt,
+        rw re_not_empty,
+        rw band_eq_true_eq_eq_tt_and_eq_tt,
         exact ⟨ih₁, ih₂⟩,
       },
-      all_goals { rw [bor_eq_true_eq_eq_tt_or_eq_tt], },
       case MUnionL : s₁ re₁ re₂ h ih {
-        show re_not_empty re₁ = tt ∨ re_not_empty re₂ = tt,
+        rw re_not_empty,
+        rw bor_eq_true_eq_eq_tt_or_eq_tt,
         exact or.inl ih,
       },
       case MUnionR : re₁ s₂ re₂ h ih {
-        show re_not_empty re₁ = tt ∨ re_not_empty re₂ = tt,
+        rw re_not_empty,
+        rw bor_eq_true_eq_eq_tt_or_eq_tt,
         exact or.inr ih,
       },
+      case MStar0 : re { rw re_not_empty, },
+      case MStarApp : s₁ s₂ re h₁ h₂ ih₁ ih₂ { rw re_not_empty, },
     },
+  intro h,
   induction re,
-  all_goals { rw [re_not_empty] at h, },
-  case EmptySet { contradiction, },
+  case EmptySet { cases h, },
   case EmptyStr { exact ⟨[], MEmpty⟩, },
   case Char { exact ⟨[re], MChar re⟩, },
   case App : re₁ re₂ ih₁ ih₂ {
-    rw [band_eq_true_eq_eq_tt_and_eq_tt] at h,
-    change re_not_empty re₁ = tt ∧ re_not_empty re₂ = tt at h,
+    rw re_not_empty at h,
+    rw band_eq_true_eq_eq_tt_and_eq_tt at h,
     cases (ih₁ h.left) with w₁ ih₁,
     cases (ih₂ h.right) with w₂ ih₂,
     exact ⟨w₁ ++ w₂, MApp ih₁ ih₂⟩,
   },
   case Union : re₁ re₂ ih₁ ih₂ {
-    rw [bor_eq_true_eq_eq_tt_or_eq_tt] at h,
-    change re_not_empty re₁ = tt ∨ re_not_empty re₂ = tt at h,
+    rw re_not_empty at h,
+    rw bor_eq_true_eq_eq_tt_or_eq_tt at h,
     cases h,
       cases ih₁ h with w ih₁,
       exact ⟨w, MUnionL re₂ ih₁⟩,
@@ -1353,12 +1279,12 @@ Proof.
 Abort.
 -/
 
--- lemma star_app {α} (s₁ s₂ : list α) (re)
---   (h₁ : Star re =~ s₁) (h₂ : Star re =~ s₂)
---   : Star re =~ s₁ ++ s₂ :=
+-- lemma star_app (h₁ : s₁ =~ Star re) (h₂ : s₂ =~ Star re)
+--   : s₁ ++ s₂ =~ Star re :=
 -- begin
 --   induction h₁,
---   { simp, exact h₂, },
+--   case MEmpty { exact h₂, },
+--   case MChar { },
 -- end
 
 /-
@@ -1370,14 +1296,11 @@ Lemma star_app: ∀T (s1 s2 : list T) (re re' : reg_exp),
 Abort.
 -/
 
--- lemma star_app {α} (s₁ s₂ : list α) (re) {re'}
+-- lemma star_app {re'}
 --   {heq : Star re = re'}
---   (h₁ : Star re =~ s₁)
---   (h₂ : Star re =~ s₂)
---   : Star re =~ s₁ ++ s₂ :=
--- begin
---   sorry
--- end
+--   (h₁ : s₁ =~ Star re)
+--   (h₂ : s₂ =~ Star re)
+--   : s₁ ++ s₂ =~ Star re := sorry
 
 /-
 Lemma star_app: ∀T (s1 s2 : list T) (re : reg_exp),
@@ -1410,20 +1333,26 @@ Proof.
 Qed.
 -/
 
-lemma star_app {α} (s₁ s₂ : list α) (re)
-  (h₁ : Star re =~ s₁)
-  (h₂ : Star re =~ s₂)
-  : Star re =~ s₁ ++ s₂ :=
+/-
+ex uses discriminate with no hypothesis, so it's fair to
+introduce contradiction here
+-/
+lemma star_app (h₁ : s₁ =~ Star re) (h₂ : s₂ =~ Star re)
+  : s₁ ++ s₂ =~ Star re :=
 begin
-  /- order freaking matters -/
+  /- generalize performs rewrites at the goal-/
   revert re,
   intro,
   generalize heq : Star re = re',
   intros,
   induction h₁ generalizing h₂,
-  all_goals { try { contradiction } },
-  case MStar0 { exact h₂, },
-  case MStarApp : s₁' s₂' re' h₁' h₂' ih₁ ih₂ {
+  case MEmpty { contradiction, },
+  case MChar : a { contradiction, },
+  case MApp : s₁ re₁ s₂ re₂ h₁' h₂' ih₁ ih₂ { contradiction, },
+  case MUnionL : s₁ re₁ re₂ h ih { contradiction},
+  case MUnionR : re₁ s₂ re₂ h ih { contradiction, },
+  case MStar0 : re'' { exact h₂, },
+  case MStarApp : s₁ s₂ re'' h₁' h₂' ih₁ ih₂ {
     rw append_assoc,
     exact MStarApp h₁' (ih₂ heq h₂),
   },
@@ -1439,63 +1368,36 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/-
-had an existential that was close but wrong
-it didn't relate to the witness and it led
-to tricky issues
-also, this is the first time i used apply exists.intro
-instead of exact ⟨...⟩
+/- use permits a list, so using [] would be an empty use -/
+/- use continues working on arbitrary inductive types
+so can be used to eat the left side of the and in the goal
 -/
-
-lemma MStar'' {α} {s : list α} {re}
-  (h : Star re =~ s)
-  : ∃ss, s = foldr append [] ss
-    ∧ ∀ {s'}, In s' ss → re =~ s' :=
+lemma MStar'' (h : s =~ Star re)
+  : ∃ss, s = foldr append [] ss ∧ ∀{s'}, In s' ss → s' =~ re :=
 begin
   revert h,
   generalize heq : Star re = re',
   intro,
   induction h,
-  all_goals { try { contradiction } },
-  case MStar0 : re' { exact ⟨[], by simp⟩, },
+  case MEmpty { contradiction, },
+  case MChar { contradiction, },
+  case MApp { contradiction, },
+  case MUnionL { contradiction, },
+  case MUnionR { contradiction, },
+  case MStar0 : re'' {
+    use [[], rfl],
+    rintro s' ⟨⟩,
+  },
   case MStarApp : s₁ s₂ re' h₁ h₂ ih₁ ih₂ {
     cases ih₂ heq with w h,
-    apply exists.intro (s₁::w),
-    cases h with hl hr,
-    rw hl,
+    use s₁::w,
+    rw h.left,
     simp,
-    intros s' h',
-    cases h',
+    rintro s' (h' | h'),
       injection heq with heq',
       rw heq',
       rwa ←h',
-    exact hr h',
-  },
-end
-
-lemma MStar''' {α} {s : list α} {re}
-  : ∀ (h : Star re =~ s),
-    ∃ss, s = foldr append [] ss
-    ∧ ∀ {s'}, In s' ss → re =~ s' :=
-begin
-  generalize heq : Star re = re',
-  intro,
-  induction h,
-  all_goals { try { contradiction } },
-  case MStar0 : re' { exact ⟨[], by simp⟩, },
-  case MStarApp : s₁ s₂ re' h₁ h₂ ih₁ ih₂ {
-    cases ih₂ heq with w h,
-    exact ⟨s₁::w, by {
-      cases h with hl hr,
-      rw hl,
-      simp,
-      intros s' h',
-      cases h',
-        injection heq with heq',
-        rw heq',
-        rwa ←h',
-      exact hr h',
-    }⟩
+    exact h.right h',
   },
 end
 
@@ -1513,7 +1415,7 @@ Fixpoint pumping_constant {T} (re : @reg_exp T) : nat :=
   end
 -/
 
-def pumping_constant {α} : reg_exp α → ℕ
+def pumping_constant : @reg_exp α → ℕ
 | EmptySet := 0
 | EmptyStr := 1
 | (Char _) := 2
@@ -1538,16 +1440,18 @@ Proof.
 Qed.
 -/
 
-def napp {α} : ℕ → list α → list α
+def napp : ℕ → list α → list α
 | 0 _ := []
 | (n + 1) l := l ++ napp n l
 
-lemma napp_plus {α} (n m) (l : list α)
-  : napp (n + m) l = napp n l ++ napp m l :=
+lemma napp_plus : napp (n + m) s = napp n s ++ napp m s :=
 begin
   induction n with n ih,
-    simp [napp],
-  simp [napp],
+    unfold napp,
+    rw [zero_add, nil_append],
+  rw succ_add,
+  unfold napp,
+  rw append_assoc,
   rw ih,
 end
 
@@ -1571,22 +1475,90 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
--- lemma pumping {α} {re : reg_exp α} {s}
---   (hm : re =~ s)
---   (hp : pumping_constant re ≤ length s)
---   : ∃ {s₁ s₂ s₃},
---     s = s₁ ++ s₂ ++ s₃ ∧
---     s₂ ≠ [] ∧
---     ∀ {m}, re =~ s₁ ++ napp m s₂ ++ s₃ :=
--- begin
---   induction hm,
---   case MEmpty {
---     simp at hp,
---     /- omega doesn't work here, but not sure why it'd be needed -/
---     contradiction,
---   },
---   all_goals { sorry, },
--- end
+/- going back to default as finishing tactics can't handle our def -/
+
+/- omega is less useful, but solves a couple lemmas -/
+
+lemma le_add (h : n + m <= o) : n <= o ∧ m <= o := by omega
+
+lemma add_le_add' (h: n + m <= o + p) : n <= o ∨ m <= p := by omega
+
+lemma one_le (h : 1 <= n + m) : 1 <= n ∨ 1 <= m := by omega
+
+lemma napp_star (h₁ : s₁ =~ re) (h₂ : s₂ =~ Star re)
+  : napp n s₁ ++ s₂ =~ Star re :=
+begin
+  induction n with n ih,
+    unfold napp,
+    rwa nil_append,
+  unfold napp,
+  rw append_assoc,
+  exact MStarApp h₁ ih,
+end
+
+lemma pumping (hm : s =~ re) (hp : pumping_constant re <= s.length)
+  : ∃{s₁ s₂ s₃},
+  s = s₁ ++ s₂ ++ s₃ ∧ s₂ ≠ [] ∧ ∀{m}, s₁ ++ napp m s₂ ++ s₃ =~ re :=
+begin
+  induction hm,
+  case MEmpty { cases hp, },
+  case MChar : a { rcases hp with _ | ⟨_, _, ⟨⟩⟩, },
+  case MApp : s₁ re₁ s₂ re₂ h₁ h₂ ih₁ ih₂ {
+    unfold pumping_constant at hp,
+    rw length_append at hp,
+    cases add_le_add' hp,
+      rcases ih₁ h with ⟨s₁', s₂', s₃, rfl, h₂', h₃⟩,
+      use [s₁', s₂', s₃ ++ s₂],
+      rw append_assoc,
+      use [rfl, h₂'],
+      intro m,
+      rw ←append_assoc,
+      exact MApp h₃ h₂,
+    rcases ih₂ h with ⟨s₁', s₂', s₃, rfl, h₂', h₃⟩,
+    use [s₁ ++ s₁', s₂', s₃],
+    rw [←append_assoc, ←append_assoc],
+    use [rfl, h₂'],
+    intro m,
+    rw [append_assoc, append_assoc],
+    apply MApp h₁,
+    rw ←append_assoc,
+    exact h₃,
+  },
+  case MUnionL : s₁ re₁ re₂ h ih {
+    unfold pumping_constant at hp,
+    rcases ih (le_add hp).left with ⟨s₁', s₂, s₃, rfl, h₂, h₃⟩,
+    use [s₁', s₂, s₃, rfl, h₂],
+    intro m,
+    apply MUnionL,
+    exact h₃,
+  },
+  case MUnionR : re₁ s₂ re₂ h ih {
+    unfold pumping_constant at hp,
+    rcases ih (le_add hp).right with ⟨s₁, s₂', s₃, rfl, h₂, h₃⟩,
+    use [s₁, s₂', s₃, rfl, h₂],
+    intro m,
+    apply MUnionR,
+    exact h₃,
+  },
+  case MStar0 : re { cases hp, },
+  case MStarApp : s₁ s₂ re h₁ h₂ ih₁ ih₂ {
+    rw length_append at hp,
+    cases one_le hp,
+      use [[], s₁, s₂, rfl, ne_nil_of_length_pos h],
+      intro m,
+      rw nil_append,
+      exact napp_star h₁ h₂,
+    rcases ih₂ h with ⟨s₁', s₂', s₃, rfl, h₂, h₃⟩,
+    use [s₁ ++ s₁', s₂', s₃],
+    rw [←append_assoc, ←append_assoc],
+    use [rfl, h₂],
+    intro m,
+    rw [append_assoc, append_assoc],
+    apply MStarApp h₁,
+    rw ←append_assoc,
+    exact h₃,
+  },
+end
 
 /-
 Theorem filter_not_empty_In : ∀n l,
@@ -1606,23 +1578,19 @@ Proof.
 Qed.
 -/
 
-theorem filter_not_empty_In {n l}
-  (h : filter (λ x, n =? x) l ≠ [])
-  : In n l :=
+theorem filter_not_empty_In {l} (h : filter (λx, n =? x) l ≠ []) : In n l :=
 begin
   induction l with m l ih,
-    simp at h,
-    contradiction,
-  simp,
-  cases heq : (n =? m),
+    apply h,
+    refl,
+  cases heq : n =? m,
     right,
     apply ih,
-    simp [filter] at h,
+    unfold filter at h,
     rwa heq at h,
   left,
   rw eqb_eq at heq,
-  symmetry,
-  exact heq,
+  rw heq,
 end
 
 /-
@@ -1631,12 +1599,11 @@ Inductive reflect (P : Prop) : bool → Prop :=
 | ReflectF (H : ¬P) : reflect P false.
 -/
 
-/- not really sure what the builtin one is-/
-inductive reflect' (P : Prop) : bool → Prop
-| ReflectT (h : P) : reflect' tt
-| ReflectF (h : ¬P) : reflect' ff
+inductive reflect (P : Prop) : bool → Prop
+| ReflectT (h : P) : reflect tt
+| ReflectF (h : ¬P) : reflect ff
 
-open reflect'
+open reflect
 
 /-
 Theorem iff_reflect : ∀P b, (P ↔ b = true) → reflect P b.
@@ -1648,7 +1615,7 @@ Proof.
 Qed.
 -/
 
-theorem iff_reflect {P b} (h : P ↔ b = tt) : reflect' P b :=
+theorem iff_reflect {b} (h : P ↔ b = tt) : reflect P b :=
 begin
   cases b,
     apply ReflectF,
@@ -1664,12 +1631,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem reflect_iff {P b} (h : reflect' P b) : (P ↔ b = tt) :=
+theorem reflect_iff {b} (h : reflect P b) : (P ↔ b = tt) :=
 begin
   cases h with h' h',
-    simp,
-    exact h',
-  simp,
+    rw eq_self_iff_true,
+    rwa iff_true,
+  simp only [iff_false],
   exact h',
 end
 
@@ -1680,7 +1647,7 @@ Proof.
 Qed.
 -/
 
-lemma eqbP (n m) : reflect' (n = m) (n =? m) :=
+lemma eqbP : reflect (n = m) (n =? m) :=
 begin
   apply iff_reflect,
   rw eqb_eq,
@@ -1703,19 +1670,12 @@ Proof.
 Qed.
 -/
 
-/- complaint below is invalid with generalize -/
--- /- can't use cases, and destruct is bad -/
--- /- this is much worse than without ebqP -/
-
-theorem filter_not_empty_In' {n l}
-  (h : filter (λ x, n =? x) l ≠ [])
-  : In n l :=
+theorem filter_not_empty_In' {l} (h : filter (λ x, n =? x) l ≠ []) : In n l :=
 begin
-  induction l with m l' ih,
-    simp at h,
-    contradiction,
-  simp,
-  have, exact eqbP n m,
+  induction l with m l ih,
+    apply h,
+    refl,
+  have, exact @eqbP n m,
   generalize heq : n =? m = eq,
   generalize heq' : n = m = eq',
   rw [heq, heq'] at this,
@@ -1723,39 +1683,14 @@ begin
   case ReflectT : this' {
     rw ←heq' at this',
     rw this',
-    exact or.inl (refl _),
+    exact or.inl rfl,
   },
   case ReflectF : this' {
     unfold filter at h,
     rw heq at h,
-    simp at h,
     exact or.inr (ih h),
   },
 end
-
--- theorem filter_not_empty_In' {n l}
---   (h : filter (λ x, n =? x) l ≠ [])
---   : In n l :=
--- begin
---   induction l with m l' ih,
---     simp at h,
---     contradiction,
---   simp,
---   simp [filter] at h,
---   destruct (eqbP n m),
---     intro h',
---     left,
---     symmetry,
---     exact h',
---   intro h',
---   right,
---   apply ih,
---   have : n =? m = ff,
---     rwa eqb_neq,
---   rw this at h,
---   simp at h,
---   exact h,
--- end
 
 /-
 Fixpoint count n l :=
@@ -1770,91 +1705,41 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-def count' (n) : list ℕ → ℕ
+def count (n) : list ℕ → ℕ
 | [] := 0
-| (m::l) := (if n =? m then 1 else 0) + count' l
+| (m::l) := (if n =? m then 1 else 0) + count l
 
-theorem eqbP_practice {n l}
-  (h : count' n l = 0)
-  : ¬In n l :=
+/-
+TODO: introduced revert_after for hypothesis management to make
+generalize work nicer
+-/
+
+theorem eqbP_practice' {l} (h : count n l = 0) : ¬In n l :=
 begin
-  induction l with m t ih,
-    simp,
-  simp [count'] at h,
-  cases heq : (n =? m),
-    simp,
-    by_contra c,
-    rw heq at h,
-    simp at h,
-    cases c,
-      have : n =? m = tt,
-        rw c,
-        simp,
-      rw heq at this,
-      contradiction,
-    exact absurd c (ih h),
-  rw heq at h,
-  simp at h,
-  contradiction,
-end
-
-/- still not better. should see what coq does -/
-/- even after learning generalize, it's not great -/
-
-theorem eqbP_practice' {n l}
-  (h : count' n l = 0)
-  : ¬In n l :=
-begin
-  induction l with m t ih,
-    simp,
-  simp [count'] at h,
+  induction l with m l ih,
+    rintro ⟨⟨⟩⟩,
+  unfold count at h,
+  have, exact @eqbP n m,
+  revert_after ih,
   generalize heq : n = m = eq,
   generalize heq' : n =? m = eq',
-  have, exact eqbP n m,
-  rw [heq, heq'] at this,
-  cases this,
-  case ReflectT : this' {
-    rw heq' at h,
-    simp at h,
+  intros h h',
+  cases h',
+  case ReflectT : h' {
+    simp only [if_true, bool.coe_sort_tt] at h,
+    rw add_comm at h,
     contradiction,
   },
-  case ReflectF : this' {
-    rw heq' at h,
-    simp at h,
-    simp,
-    by_contra c,
-    cases c,
-      rw [←heq, c] at this',
+  case ReflectF : h' {
+    simp only [bool.coe_sort_ff, if_false] at h,
+    rintro (c | c),
+      rw c at heq,
+      simp only [true_iff, eq_self_iff_true, eq_iff_iff] at heq,
       contradiction,
+    rw zero_add at h,
     exact absurd c (ih h),
   },
 end
-
--- theorem eqbP_practice' {n l}
---   (h : count' n l = 0)
---   : ¬In n l :=
--- begin
---   induction l with m t ih,
---     simp,
---   simp [count'] at h,
---   destruct (eqbP n m),
---     intro heq,
---     simp,
---     rw heq at h,
---     simp at h,
---     contradiction,
---   intro heq,
---   have : n =? m = ff,
---     exact (eqb_neq n m).mpr heq,
---   rw this at h,
---   simp,
---   simp at h,
---   by_contra c,
---   cases c,
---     rw c at heq,
---     contradiction,
---   exact absurd c (ih h),
--- end
 
 /-
 Inductive nostutter {X:Type} : list X → Prop :=
@@ -1862,7 +1747,7 @@ Inductive nostutter {X:Type} : list X → Prop :=
 .
 -/
 
-inductive nostutter {α : Type} : list α → Prop
+inductive nostutter : list α → Prop
 | no₀ : nostutter []
 | no₁ (a) : nostutter [a]
 | no₂ (a) {h t} (n : nostutter (h::t)) (hne : a ≠ h)
@@ -1902,65 +1787,61 @@ Example test_nostutter_4: not (nostutter [3;1;1;4]).
 *)
 -/
 
-example : nostutter [3,1,4,1,5,6] :=
-begin
-  repeat { constructor },
-  repeat {
-    simp,
-    by_contra c,
-    cases c,
-  },
-end
+example : nostutter [3, 1, 4, 1, 5, 6] :=
+by repeat { constructor, }; omega
 
-example : @nostutter ℕ [] := no₀
+example : @nostutter ℕ [] :=
+by repeat { constructor, }; omega
 
-example : nostutter [5] := no₁ 5
+example : nostutter [5] :=
+by repeat { constructor, }; omega
 
-example : ¬nostutter [3,1,1,4] :=
+/- not converting ltac for this -/
+example : ¬nostutter [3, 1, 1, 4] :=
 begin
   by_contra c,
-  repeat {
-    cases c with _ _ _ _ c h,
-    try { trivial },
-  },
+  repeat { contradiction <|> cases c with _ _ _ _ c h },
 end
 
-inductive merge {α} : list α → list α → list α → Prop
+inductive merge : list α → list α → list α → Prop
 | m₀ : merge [] [] []
 | ml (h) {t r m} (hm : merge t r m) : merge (h::t) r (h::m)
 | mr {l} (h) {t m} (hm : merge l t m) : merge l (h::t) (h::m)
 
 open merge
 
-example : merge [1,2,3] [4,5,6] [1,2,3,4,5,6] :=
-by repeat { constructor }
+example : merge [1, 2, 3] [4, 5, 6] [1, 2, 3, 4, 5, 6] :=
+by repeat { constructor, }
 
-example : merge [1,2,3] [4,5,6] [4,5,6,1,2,3] :=
-by repeat { constructor }
+example : merge [1, 2, 3] [4, 5, 6] [4, 5, 6, 1, 2, 3] :=
+by repeat { constructor, }
 
-example : merge [1,2,3] [4,5,6] [1,4,2,5,3,6] :=
-by repeat { constructor }
+example : merge [1, 2, 3] [4, 5, 6] [1, 4, 2, 5, 3, 6] :=
+by repeat { constructor, }
 
-open poly
+/-
+need λ for coe from bool to Prop
+TODO : maybe change p to return a decidable prop
+-/
 
-lemma filter_merge {α} {l r m} {p : α → bool}
+lemma filter_merge {l r m} {p : α → bool}
   (hm : merge l r m)
   (hf : ∀a, In a l → p a = ff)
   (ht : ∀a, In a r → p a = tt)
-  : filter p m = r :=
+  : m.filter (λa, p a) = r :=
 begin
   induction hm,
   case m₀ { refl, },
   case ml : h t r m hm ih {
     have : p h = ff,
       apply hf,
-      simp,
-    simp,
+      use rfl,
+    unfold filter,
     rw this,
-    simp,
+    simp only [bool.coe_sort_ff, if_false],
     apply ih,
       intros a hin,
-      simp at hf,
+      unfold In at hf,
       exact hf a (or.inr hin),
     intros a hin,
     exact ht a hin,
@@ -1968,258 +1849,337 @@ begin
   case mr : l h t m hm ih {
     have : p h = tt,
       apply ht,
-      simp,
-    simp,
+      use rfl,
+    unfold filter,
     rw this,
-    simp,
+    simp only [if_true, bool.coe_sort_tt],
+    use rfl,
     apply ih,
       intros a hin,
       exact hf a hin,
     intros a hin,
-    simp at ht,
+    unfold In at ht,
     exact ht a (or.inr hin),
   },
 end
 
-/-
-TODO filter challenge 2
--/
+/- filter challenge 2 -/
 
-/- revenge of the lst -/
-/- pretty easy -/
-/- probably due to lots of simp attributes -/
+theorem filter_longest_matching_subseq
+  {l₁ l₂ : list α} {p : α → bool}
+  (hs : subseq l₁ l₂)
+  (ht : l₁.all p)
+  : l₁.length ≤ (l₂.filter (λa, p a)).length :=
+begin
+  induction hs,
+  case em { exact refl, },
+  case cr : l₁' l₂' a h ih {
+    apply le_trans (ih ht),
+    unfold filter,
+    cases p a,
+      exact refl,
+    exact step refl,
+  },
+  case cl : l₁' l₂' a h ih {
+    unfold filter,
+    unfold list.all foldr at ht,
+    simp only [band_coe_iff] at ht,
+    simp only [ht.left, if_true],
+    unfold list.length,
+    apply nat.succ_le_succ,
+    exact ih ht.right,
+  },
+end
 
-inductive pal {α} : lst α → Prop
-| pal₀ : pal ⟦⟧
-| pal₁ (a) : pal ⟦a⟧
-| pal₂ (a) {l} (h : pal l) : pal (a::l ++ ⟦a⟧)
+section palindrome
+
+open poly (
+  append_assoc nil_append reverse_append
+  reverse_involutive
+)
+open poly.list
+
+local infix :: := cons
+local infix ++ := append
+local notation `[]` := nil
+local notation `[` l:(foldr `, ` (h t, cons h t) nil `]`) := l
+
+variable {l : poly.list α}
+
+inductive pal : poly.list α → Prop
+| pal₀ : pal []
+| pal₁ (a) : pal [a]
+| pal₂ (a) {l} (h : pal l) : pal (a::l ++ [a])
 
 open pal
 
-example : pal ⟦1,2,1⟧ :=
-begin
-  have : (⟦1,2,1⟧ : lst ℕ) = (⟦1,2⟧ : lst ℕ) ++ (⟦1⟧ : lst ℕ),
-    refl,
-  rw this,
-  repeat {constructor},
-end
+example : pal [1, 2, 1] := pal₂ 1 (pal₁ 2)
 
-lemma pal_app_rev {α} (l : lst α) : pal (l ++ rev l) :=
+lemma pal_app_rev : pal (l ++ l.reverse) :=
 begin
-  induction l with h t ih,
-    simp,
+  induction l with a l ih,
     exact pal₀,
-  simp,
-  rw app_assoc,
-  exact pal₂ h ih,
+  rw poly.cons_append,
+  rw reverse,
+  rw poly.append_assoc,
+  exact pal₂ a ih,
 end
 
-lemma pal_rev {α} {l : lst α} (p : pal l) : l = rev l :=
+lemma pal_rev (p : pal l) : l = l.reverse :=
 begin
   induction p,
   case pal₀ { refl, },
   case pal₁ { refl, },
   case pal₂ : h t hp ih {
-    simp,
+    rw poly.cons_append,
+    unfold reverse,
+    rw reverse_append,
+    unfold reverse,
+    unfold poly.list.append,
     rw ←ih,
   },
 end
 
 /-
-TODO palindrome_converse
+palindrome converse
 -/
 
-/- builtin has a nice alternative -/
+theorem nat.le_of_succ_le (h : n + 1 ≤ m) : n ≤ m := le_trans (step refl) h
 
-inductive disjoint' {α} : list α → list α → Prop
-| dis₀ : disjoint' [] []
-| disl (h) {t r} (d : disjoint' t r) (hn : ¬In h r) : disjoint' (h::t) r
-| disr (h) {l t} (d : disjoint' l t) (hn : ¬In h l) : disjoint' l (h::t)
-
-open disjoint'
-
-/- lean's builtin has a sweet definition -/
-
-inductive nodup' {α} : list α → Prop
-| nodup₀ : nodup' []
-| nodup₁ (h) {l} (n : nodup' l) (hn : ¬In h l) : nodup' (h::l)
-
-open nodup'
-
-example : nodup' [1,2,3,4] :=
+theorem nat.le_add_left : n ≤ m + n :=
 begin
-  repeat {constructor},
-  repeat {simp, try {omega} },
+  induction m with m ih,
+    rw zero_add,
+    exact refl,
+  rw succ_add,
+  exact step ih,
 end
 
-example : @nodup' bool [] := nodup₀
+lemma one_le_cons_length (a : α) (l : poly.list α) : 1 ≤ (a::l).length :=
+by apply nat.le_add_left
 
-example : ¬nodup' [1,2,1] :=
+lemma has_snoc {l : poly.list α} (h : 1 ≤ l.length) : ∃ll ar, l = ll ++ [ar] :=
+begin
+  induction l with a l ih,
+    cases h,
+  cases l with a' l,
+    use [[], a],
+    rw poly.nil_append,
+  rcases ih (one_le_cons_length a' l) with ⟨ll, ar, ih⟩,
+  use [a::ll, ar],
+  rw ih,
+  rw poly.cons_append,
+end
+
+lemma length_append_cons (a l') (h : l = l' ++ [a])
+  : l.length = l'.length + 1 :=
+begin
+  induction l' with a' l' ih generalizing l,
+    cases l with a'' l,
+      cases h,
+    cases h,
+    refl,
+  cases l with a'' l,
+    cases h,
+  cases h,
+  unfold length,
+  simp only [add_left_inj],
+  exact ih rfl,
+end
+
+lemma append_cons_eq_length {l₁ l₂ : poly.list α} {a₁ a₂}
+  (h : l₁ ++ [a₁] = l₂ ++ [a₂]) : l₁.length = l₂.length :=
+begin
+  replace h, exact congr_arg length h,
+  rw length_append_cons a₁ l₁ rfl at h,
+  rw length_append_cons a₂ l₂ rfl at h,
+  rwa add_left_inj at h,
+end
+
+lemma append_cons_eq {l₁ l₂ : poly.list α} {a₁ a₂}
+  (h : l₁ ++ [a₁] = l₂ ++ [a₂]) : l₁ = l₂ ∧ a₁ = a₂ :=
+begin
+  have hl, exact append_cons_eq_length h,
+  induction l₁ with a₁' l₁ ih generalizing l₂,
+    cases l₂ with a₂' l₂,
+      cases h,
+      use [rfl, rfl],
+    cases hl,
+  cases l₂ with a₂' l₂,
+    cases hl,
+  injections with h₁ h₂ h₃,
+  rw h₁,
+  simp only [true_and, eq_self_iff_true],
+  exact ih h₂ h₃,
+end
+
+lemma rev_cons_snoc {al ar : α} {lm : poly.list α}
+  (h : al::lm ++ [ar] = (al::lm ++ [ar]).reverse) : al = ar ∧ lm = lm.reverse :=
+begin
+  rw poly.cons_append at h,
+  unfold reverse at h,
+  rw reverse_append at h,
+  injections with h₁ h₂,
+  rw poly.nil_append at h₂,
+  use [h₁, (append_cons_eq h₂).left],
+end
+
+lemma rev_pal_aux (hr : l = l.reverse) (n) (hl : l.length ≤ n) : pal l :=
+begin
+  induction n with n ih generalizing l,
+    cases l with a l,
+      exact pal₀,
+    cases hl,
+  cases l with a l,
+    exact pal₀,
+  cases l with a' l,
+    exact pal₁ a,
+  rcases has_snoc (one_le_cons_length a' l) with ⟨ll, ar', h⟩,
+  rw h at hl hr ⊢,
+  rcases rev_cons_snoc hr with ⟨rfl, hr'⟩,
+  have hl' : ll.length ≤ n,
+    unfold length at hl,
+    rw length_append_cons a ll rfl at hl,
+    exact nat.le_of_succ_le (nat.le_of_succ_le_succ hl),
+  exact pal₂ a (ih hr' hl'),
+end
+
+lemma rev_pal (h : l = l.reverse) : pal l :=
+by exact rev_pal_aux h l.length refl
+
+end palindrome
+
+/- very different from builtin -/
+
+inductive disjoint : list α → list α → Prop
+| dis₀ : disjoint [] []
+| disl (h) {t r} (d : disjoint t r) (hn : ¬In h r) : disjoint (h::t) r
+| disr (h) {l t} (d : disjoint l t) (hn : ¬In h l) : disjoint l (h::t)
+
+open indprop.disjoint
+
+inductive nodup : list α → Prop
+| nodup₀ : nodup []
+| nodup₁ (h) {l} (n : nodup l) (hn : ¬In h l) : nodup (h::l)
+
+open nodup
+
+example : nodup [1, 2, 3, 4] :=
+begin
+  repeat {constructor},
+  repeat {unfold In <|> simp only [not_false_iff, or_false] <|> omega },
+end
+
+example : @nodup bool [] := nodup₀
+
+example : ¬nodup [1, 2, 1] :=
 begin
   by_contra c,
   cases c with _ _ h hn,
-  simp at hn,
-  contradiction,
+  unfold In at hn,
+  simp only [eq_self_iff_true, not_true, or_false, or_true] at hn,
+  exact hn,
 end
 
-example : ¬nodup' [tt,tt] :=
+example : ¬nodup [tt, tt] :=
 begin
   by_contra c,
   cases c with _ _ n hn,
-  simp at hn,
-  contradiction,
+  unfold In at hn,
+  simp only [eq_self_iff_true, not_true, or_false] at hn,
+  exact hn,
 end
 
-lemma in_append {α a} {l r : list α}
-  : In a (l ++ r) ↔ In a l ∨ In a r :=
-begin
-  split,
-    intro hin,
-    induction l with h t ih,
-      simp at hin,
-      exact or.inr hin,
-    simp,
-    simp at hin,
-    cases hin,
-      exact or.inl (or.inl hin),
-    rw or.assoc,
-    exact or.inr (ih hin),
-  intro hin,
-  cases hin,
-    induction l with h t ih,
-      simp at hin,
-      contradiction,
-    simp,
-    simp at hin,
-    cases hin,
-      exact or.inl hin,
-    exact or.inr (ih hin),
-  induction l with h t ih,
-    simp,
-    exact hin,
-  simp,
-  exact or.inr ih,
-end
-
-/- mfer -/
-
-lemma dis_cons' {α} {a : α} {l r} (h : list.disjoint (a :: l) r)
-  : ¬a ∈ r ∧ disjoint l r :=
-begin
-  simp [list.disjoint] at *,
-  exact h,
-end
-
-lemma nil_dis {α} (l : list α) : disjoint' l nil :=
+lemma nil_dis (l : list α) : disjoint l [] :=
 begin
   induction l with h t ih,
     exact dis₀,
   apply disl h ih,
-  simp,
+  exact not_false,
 end
 
-lemma dis_nil {α} (r : list α) : disjoint' nil r :=
+lemma dis_nil (r : list α) : disjoint [] r :=
 begin
   induction r with h t ih,
     exact dis₀,
   apply disr h ih,
-  simp,
+  exact not_false,
 end
 
-lemma dis_iso {α} (l r : list α)
-  : disjoint' l r ↔ (∀a, In a l → ¬In a r) ∧ (∀a, In a r → ¬In a l) :=
+lemma dis_iso {l r : list α}
+  : disjoint l r ↔ (∀a, In a l → ¬In a r) ∧ (∀a, In a r → ¬In a l) :=
 begin
   split,
     intro h,
     induction h,
-    case dis₀ { simp, },
+    case dis₀ {
+      rw and_self,
+      rintro a ⟨⟩,
+    },
     case disl : h' t r' d hn ih {
-      simp,
-      constructor,
+      split,
         cases ih with ihl ihr,
-        intros a h'',
-        cases h'',
-          rwa h'' at hn,
-        by_contra c,
-        exact absurd h'' (ihr _ c),
+        rintro a (rfl | h'') c,
+          exact absurd c hn,
+        exact absurd h'' (ihr a c),
       cases ih with ihl ihr,
-      intros a h'',
-      by_contra c,
-      cases c,
-        rw c at hn,
-        contradiction,
-      exact absurd h'' (ihl _ c),
+      rintros a h'' (rfl | c),
+        exact absurd h'' hn,
+      exact absurd h'' (ihl a c),
     },
     case disr : h' l' t d hn ih {
-      simp,
-      constructor,
+      split,
         cases ih with ihl ihr,
-        intros a h'',
-        by_contra c,
-        cases c,
-          rw c at hn,
-          contradiction,
-        exact absurd h'' (ihr _ c),
+        rintros a h'' (rfl | c),
+          exact absurd h'' hn,
+        exact absurd h'' (ihr a c),
       cases ih with ihl ihr,
-      intros a h'',
-      cases h'',
-        rwa h'' at hn,
-      by_contra c,
-      exact absurd h'' (ihl _ c),
+      rintros a (rfl | h'') c,
+        exact absurd c hn,
+      exact absurd h'' (ihl a c),
     },
-  intro h,
-  cases h with hl hr,
-  induction l with hd tl ih generalizing r,
+  rintro ⟨hl, hr⟩,
+  induction l with a l ih generalizing r,
     exact dis_nil r,
-  simp at hl,
-  simp at hr,
-  have : disjoint' tl r,
+  have : disjoint l r,
     apply ih,
       intros a h',
       exact hl a (or.inr h'),
     intros a h',
     have, exact hr a h',
-    rw not_or_distrib at this,
-    cases this with hl' hr',
-    exact hr',
-  refine disl hd this _,
+    rw In at this,
+    exact (not_or_distrib.mp this).right,
+  refine disl a this _,
   apply hl,
-  simp,
+  exact or.inl rfl,
 end
 
-/- could not get this without dis_iso helper -/
-
-lemma dis_cons {α} {h : α} {t r} (d : disjoint' (h :: t) r)
-  : ¬In h r ∧ disjoint' t r :=
+lemma dis_cons {l r} (d : disjoint (a :: l) r) : ¬In a r ∧ disjoint l r :=
 begin
-  rw dis_iso (h::t) r at d,
-  simp at d,
-  cases d with dl dr,
-  constructor,
-    by_contra,
-    have, exact dr h a,
-    rw not_or_distrib at this,
-    simp at this,
-    contradiction,
-  rw dis_iso t r,
-  constructor,
+  rcases dis_iso.mp d with ⟨dl, dr⟩,
+  split,
+    by_contra c,
+    have, exact dr a c,
+    rw [In, not_or_distrib] at this,
+    exact this.left rfl,
+  rw dis_iso,
+  split,
     intros a h',
     apply dl,
     exact or.inr h',
   intros a h',
   have, exact dr a h',
-  rw not_or_distrib at this,
+  rw [In, not_or_distrib] at this,
   exact this.right,
 end
 
-lemma nodup_cons {α} {a : α} {l} (hn : nodup' (a::l)) : nodup' l :=
+lemma nodup_cons {l} (hn : nodup (a::l)) : nodup l :=
 begin
   cases hn with _ _ n hn,
   exact n,
 end
 
-lemma nodup_app {α} {l r : list α} (hn : nodup' (l++r))
-  : nodup' l ∧ nodup' r :=
+lemma nodup_app {l r : list α} (hn : nodup (l ++ r)) : nodup l ∧ nodup r :=
 begin
   induction l,
   case nil {
@@ -2231,16 +2191,14 @@ begin
     have, exact ih n,
     refine ⟨nodup₁ hd this.left _, this.right⟩,
     change ¬In hd (tl ++ r) at hn,
-    rw in_append at hn,
+    rw in_app_iff at hn,
     rw not_or_distrib at hn,
     exact hn.left,
   }
 end
 
-lemma app_disjoint {α} {l r : list α}
-  (hl : nodup' l) (hr : nodup' r)
-  (hd : disjoint' l r)
-  : nodup' (l ++ r) :=
+lemma app_disjoint {l r : list α}
+  (hl : nodup l) (hr : nodup r) (hd : disjoint l r) : nodup (l ++ r) :=
 begin
   rw dis_iso at hd,
   cases hd with hdl hdr,
@@ -2250,361 +2208,25 @@ begin
     exact hr,
   },
   case nodup₁ : h t n hn ih {
-    simp,
-    simp at hdl,
-    simp at hdr,
-    have : nodup' (t ++ r),
+    rw cons_append,
+    have : nodup (t ++ r),
       apply ih hr,
         intros a h',
         exact hdl a (or.inr h'),
-      intros a h',
-      by_contra c,
+      intros a h' c,
       have, exact hdr a h',
-      rw not_or_distrib at this,
+      rw [In, not_or_distrib] at this,
       exact absurd c this.right,
     refine nodup₁ h this _,
     by_contra c,
-    rw in_append at c,
-    cases c,
-      contradiction,
+    rcases in_app_iff.mp c with c | c,
+      exact absurd c hn,
     have : ¬In h r,
       apply hdl h,
-      simp,
-    contradiction,
+      exact or.inl rfl,
+    exact absurd c this,
   },
 end
-
-
-/- not an iso because i forget order -/
-
-lemma merge_iso' {α} {l r m : list α} (h : merge l r m)
-  : length m = length l + length r ∧
-  ∀a, In a m ↔ In a l ∨ In a r :=
-begin
-  induction h,
-  case m₀ { simp, },
-  case ml : h t r' m hm ih {
-    cases ih with ihl ihr,
-    simp,
-    split,
-      rw ihl,
-    intro a,
-    split,
-      intro h',
-      cases h',
-        exact or.inl (or.inl h'),
-      rw or_assoc,
-      exact or.inr ((ihr a).mp h'),
-    intro h',
-    rw or_assoc at h',
-    cases h',
-      exact or.inl (h'),
-    exact or.inr ((ihr a).mpr h'),
-  },
-  case mr : l' h t m' hm ih {
-    cases ih with ihl ihr,
-    simp,
-    split,
-      rw ihl,
-      rw add_assoc,
-    intro a,
-    split,
-      intro h',
-      cases h',
-        exact or.inr (or.inl h'),
-      rw [←or_assoc, or_comm (In a l'), or_assoc],
-      exact or.inr ((ihr a).mp h'),
-    intro h',
-    cases h',
-      exact or.inr ((ihr a).mpr (or.inl h')),
-    cases h',
-      exact or.inl h',
-    exact or.inr ((ihr a).mpr (or.inr h')),
-  },
-end
-
--- lemma merge_order {α} : ∀ {l r m : list α} (h : merge l r m),
---   ∀{l₁ l₂}, l = l₁ ++ l₂ →
---     ∃r₁ r₂, r = r₁ ++ r₂ ∧
---       ∃m₁ m₂, m = m₁ ++ m₂ ∧
---         merge l₁ r₁ m₁ ∧
---         merge l₂ r₂ m₂
--- | l r m (m₀) :=
--- begin
---   intros _ _ heq,
---   exact ⟨[], [], by {
---     simp,
---     exact ⟨[], [], by {
---       simp,
---       simp at heq,
---       cases heq with h₁ h₂,
---       rw [h₁, h₂],
---       exact ⟨m₀, m₀⟩,
---     }⟩,
---   }⟩,
--- end
--- | (h₁::t₁) r (m₁::m₂) (ml h m) :=
--- begin
---   intros _ _ heq,
---   cases l₁ with h₁' t₁',
---     sorry,
---   injection heq with hl hr,
---   have, exact merge_order m hr,
---   cases this with wr₁ h',
---   cases h' with wr₂ h',
---   cases h' with hl' hr',
---   cases hr' with wm₁ hr',
---   cases hr' with wm₂ hr',
---   exact ⟨wr₁, wr₂, by {
---     split,
---       exact hl',
---     exact ⟨h::wm₁, wm₂, by {
---       simp,
---       rw ←hl,
---       exact ⟨hr'.left, ml h hr'.right.left, hr'.right.right⟩,
---     }⟩,
---   }⟩,
--- end
--- | l (h₂::t₂) (m₁::m₂) (mr h m) :=
--- begin
---   sorry,
--- end
-
--- lemma merge_order {α} {l r m : list α} (h : merge l r m)
---   : ∀{l₁ l₂}, l = l₁ ++ l₂ →
---     ∃r₁ r₂, r = r₁ ++ r₂ ∧
---       ∃m₁ m₂, m = m₁ ++ m₂ ∧
---         merge l₁ r₁ m₁ ∧
---         merge l₂ r₂ m₂ :=
--- begin
---   induction m generalizing l r,
---   case nil {
---     cases h,
---     simp,
---     intros _ _ h₁ h₂,
---     exact ⟨[], [], by {
---       simp,
---       exact ⟨[], [], by {
---         simp,
---         rw [h₁, h₂],
---         exact ⟨m₀, m₀⟩,
---       }⟩,
---     }⟩,
---   },
---   case cons : hd tl ih {
---     cases h,
---     case ml : t hm {
---       intros _ _ heq,
---       cases l₁ with h₁ t₁,
---         cases l₂ with h₂ t₂,
---           cases heq,
---         injection heq with hl hr,
---         rw ←nil_append t₂ at hr,
---         have, exact ih hm hr,
---         cases this with wr₁ h',
---         cases h' with wr₂ h',
---         cases h' with hl' hr',
---         cases hr' with wm₁ hr',
---         cases hr' with wm₂ hr',
---         exact ⟨wr₁, wr₂, by {
---           split,
---             exact hl',
---           exact ⟨hd::wm₁, wm₂, by {
---             simp,
---             rw ←hl,
---             sorry,
---             -- exact ⟨hr'.left, ml hd hr'.right.left, hr'.right.right⟩,
---           }⟩
---         }⟩,
---       injection heq with hl hr,
---       have, exact ih hm hr,
---       cases this with wr₁ h',
---       cases h' with wr₂ h',
---       cases h' with hl' hr',
---       cases hr' with wm₁ hr',
---       cases hr' with wm₂ hr',
---       exact ⟨wr₁, wr₂, by {
---         split,
---           exact hl',
---         exact ⟨hd::wm₁, wm₂, by {
---           simp,
---           rw ←hl,
---           exact ⟨hr'.left, ml hd hr'.right.left, hr'.right.right⟩,
---         }⟩
---       }⟩
---     }
---   }
--- end
-
--- lemma merge_order {α} {l r m : list α} (h : merge l r m)
---   : ∀l₁ l₂, l = l₁ ++ l₂ →
---     ∃r₁ r₂ m₁ m₂,
---       r = r₁ ++ r₂ ∧
---       m = m₁ ++ m₂ ∧
---       merge l₁ r₁ m₁ ∧
---       merge l₂ r₂ m₂ :=
--- begin
---   induction h,
---   case m₀ {
---     simp,
---     intros _ _ hl₁ hl₂,
---     exact ⟨[], [], ⟨rfl, rfl⟩, [], [], by {
---       simp,
---       rw [hl₁, hl₂],
---       exact ⟨m₀, m₀⟩,
---     }⟩
---   },
---   case ml : h t r' m hm ih {
---     simp at *,
---     intros _ _ hl,
---     cases l₁ with h₁ t₁,
---       simp at hl,
---       cases l₂ with h₂ t₂,
---         contradiction,
---       injection hl with hll hlr,
---       have, exact ih [] t₂ hlr,
---       cases this with wr₁ h',
---       cases h' with wr₂ h',
---       cases h' with hl' hr',
---       cases hr' with wm₁ hr',
---       cases hr' with wm₂ hr',
---       exact ⟨wr₁, wr₂, by {
---         split,
---           exact hl',
---         exact ⟨wm₁, h::wm₂, by {
---           simp,
---           sorry,
---         }⟩,
---       }⟩,
---     injection hl with hll hlr,
---     have, exact ih t₁ l₂ hlr,
---     cases this with wr₁ h',
---     cases h' with wr₂ h',
---     cases h' with hl' hr',
---     cases hr' with wm₁ hr',
---     cases hr' with wm₂ hr',
---     exact ⟨wr₁, wr₂, by {
---       split,
---         exact hl',
---       exact ⟨h::wm₁, wm₂, by {
---         simp,
---         rw ←hll,
---         exact ⟨hr'.left, ml h hr'.right.left, hr'.right.right⟩,
---       }⟩
---     }⟩
---   },
---   case mr : l' h t m' hm ih {
-
---   },
--- end
-
-/- i have literally no clue why explicit type is needed here -/
-
-lemma merge_nil {α : Type} {r m : list α} (h : merge nil r m) : r = m :=
-begin
-  have, exact merge_iso' h,
-  induction r generalizing m,
-  case nil {
-    induction m with hd tl ih,
-      refl,
-    simp at this,
-    contradiction,
-  },
-  case cons : hd tl ih {
-    cases h with _ _ _ _ _ _ _ _ m hm,
-    have hm', exact merge_iso' hm,
-    cases hm' with hml hmr,
-    cases this with hl hr,
-    simp at *,
-    exact ih hm hl hmr,
-  },
-end
-
--- lemma merge_disjoint {α} {l r m: list α}
---   (hl : nodup' l) (hr : nodup' r)
---   (hd : disjoint' l r)
---   (hm : merge l r m)
---   : nodup' m :=
--- begin
---   rw dis_iso at hd,
---   have hm', exact merge_iso' hm,
---   cases hd with hdl hdr,
---   induction l with h t ih generalizing r m,
---   case nil {
---     simp at hm',
---     induction hr,
---   }
--- end
-
--- lemma merge_disjoint {α} {l r m: list α}
---   (hl : nodup' l) (hr : nodup' r)
---   (hd : disjoint' l r)
---   (hm : merge l r m)
---   : nodup' m :=
--- begin
---   rw dis_iso at hd,
---   cases hd with hdl hdr,
---   induction hm,
---   case m₀ { exact nodup₀, },
---   case ml : h t r' m' hm' ih {
---     simp at hdl,
---     simp at hdr,
---     have : nodup' m',
---       apply ih (nodup_cons hl) hr,
---         intro a,
---         exact (or_imp_distrib.mp (hdl a)).right,
---       intros a h',
---       exact (not_or_distrib.mp (hdr a h')).right,
---     refine nodup₁ h this _,
---     by_contra c,
-
---   },
--- end
-
--- lemma merge_disjoint' {α} {l r m: list α}
---   (hl : nodup' l) (hr : nodup' r)
---   (hd : disjoint' l r)
---   (hm : merge l r m)
---   : nodup' m :=
--- begin
---   rw dis_iso at hd,
---   cases hd with hdl hdr,
---   induction m generalizing l r,
---   case nil { exact nodup₀, },
---   case cons : hd tl ih {
---     cases hm,
---     case ml : t hm' {
---       have : nodup' tl,
---         apply ih (nodup_cons hl) hr hm',
---           simp at hdl,
---           intro a,
---           exact (or_imp_distrib.mp (hdl a)).right,
---         simp at hdr,
---         intros a h',
---         exact (not_or_distrib.mp (hdr a h')).right,
---       refine nodup₁ hd this _,
---       by_contra c,
-
---     }
---   }
--- end
-
-
-lemma dis_swap {α} {l r : list α} (d : disjoint' l r) : disjoint' r l :=
-begin
-  induction d,
-  case dis₀ { exact dis₀, },
-  case disl : h t d d hn ih { exact disr h ih hn, },
-  case disr : h l t d hn ih { exact disl h ih hn, },
-end
-
-lemma dis_swap' {α} {l r : list α} (d : disjoint' l r) : disjoint' r l :=
-begin
-  rw [dis_iso] at *,
-  rwa and_comm,
-end
-
-/- that was an 'entertaining' detour -/
 
 /-
 Lemma in_split : ∀(X:Type) (x:X) (l:list X),
@@ -2614,23 +2236,17 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma in_split {α} (a : α) (l) (hin : In a l)
-  : ∃l₁ l₂, l = l₁ ++ a :: l₂ :=
+lemma in_split {l} (hin : In a l) : ∃l₁ l₂, l = l₁ ++ a :: l₂ :=
 begin
-  induction l with h t ih,
+  induction l with a' l ih,
     cases hin,
-  cases hin,
-    exact ⟨[], t, by {
-      simp,
-      exact hin,
-    }⟩,
+  rcases hin with rfl | hin,
+    use [[], l],
+    rw nil_append,
   have, exact ih hin,
-  cases this with w₁ h₁,
-  cases h₁ with w₂ h₂,
-  exact ⟨h::w₁, w₂, by {
-    simp,
-    exact h₂,
-  }⟩,
+  rcases (ih hin) with ⟨w₁, w₂, rfl⟩,
+  use [a'::w₁, w₂],
+  rw cons_append,
 end
 
 /-
@@ -2639,7 +2255,7 @@ Inductive repeats {X:Type} : list X → Prop :=
 .
 -/
 
-inductive repeats {α} : list α → Prop
+inductive repeats : list α → Prop
 | r₀ {a} {l} (hin : In a l) : repeats (a::l)
 | r₁ (a) {l} (r : repeats l) : repeats (a::l)
 
@@ -2656,92 +2272,60 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-section
-
-/-
-use the split helper and this is easy
-forget about it, and you're gonna have a bad time
--/
-
-open classical
-
-theorem pigeonhole_principle {α} {l₁ l₂ : list α}
-  (hin : ∀a, In a l₁ → In a l₂)
-  (hlen : length l₂ < length l₁)
-  : repeats l₁ :=
-begin
-  induction l₁ with h₁ t₁ ih generalizing l₂,
-    cases hlen,
-  cases l₂ with h₂ t₂,
-    have, exact hin h₁,
-    simp at this,
-    contradiction,
-  simp at hlen,
-  cases (em (In h₁ t₁)) with h₁t₁ h₁t₁,
-    exact r₀ h₁t₁,
-  have : repeats t₁,
-    have l₂', exact in_split h₁ (h₂::t₂),
-    simp at hin,
-    have, exact l₂' (hin h₁ (or.inl (refl _))),
-    cases this with h₂' this,
-    cases this with t₂' heq,
-    apply @ih (h₂' ++ t₂'),
-      show ∀a, In a t₁ → In a (h₂' ++ t₂'),
-      intros a hin',
-      have, exact hin a (or.inr hin'),
-      cases this,
-        cases h₂' with hh ht,
-          injection heq with heq₁ heq₂,
-          rw [←this, heq₁] at hin',
-          contradiction,
-        injection heq with heq₁ heq₂,
-        rw [←this, ←heq₁],
-        simp,
-      cases h₂' with hh ht,
-        injection heq with heq₁ heq₂,
-        rw ←heq₂,
-        simp,
-        exact this,
-      injection heq with heq₁ heq₂,
-      rw heq₂ at this,
-      change In a (ht  ++  (h₁::t₂')) at this,
-      rw in_app_iff at this,
-      rw in_app_iff,
-      cases this,
-        simp,
-        exact or.inl (or.inr this),
-      simp at this,
-      cases this,
-        have hn₁ : ¬a = h₁,
-          by_contra c,
-          rw c at hin',
-          contradiction,
-        rw this at hn₁,
-        contradiction,
-      exact or.inr this,
-    show length (h₂' ++ t₂') < length t₁,
-    have hlen', exact congr_arg list.length heq,
-    have : length (h₂' ++ h₁ :: t₂') = length (h₂' ++ t₂') + 1,
-      repeat {rw app_length},
-      simp [add_assoc],
-    rw this at hlen',
-    injection hlen' with hlen'',
-    simp at hlen'',
-    rwa ←hlen'',
-  exact r₁ h₁ this,
-end
+section pigeon
 
 /-
 TODO - don't use classical
 -/
+open classical
 
+theorem pigeonhole_principle {l₁ l₂ : list α}
+  (h : ∀a, In a l₁ → In a l₂) (hl : l₂.length < l₁.length) : repeats l₁ :=
+begin
+  induction l₁ with a₁ l₁ ih generalizing l₂,
+    cases hl,
+  cases l₂ with a₂ l₂,
+    cases h a₁ (or.inl rfl),
+  cases (em (In a₁ l₁)) with hi₁ hni₁,
+    exact r₀ hi₁,
+  apply r₁,
+  rcases @in_split α a₁ (a₂::l₂) (h a₁ (or.inl rfl)) with ⟨l₂', l₃, heq⟩,
+  apply @ih (l₂' ++ l₃),
+    intros a hi₁,
+    rcases h a (or.inr hi₁) with rfl | hi₂,
+      cases l₂' with a₂' l₂',
+        cases heq,
+        exact absurd hi₁ hni₁,
+      cases heq,
+      exact or.inl rfl,
+    cases l₂' with a₂' l₂',
+      cases heq,
+      exact hi₂,
+    cases heq,
+    rw in_app_iff,
+    rcases in_app_iff.mp hi₂ with hi₂' | rfl | hi₃,
+        exact or.inl (or.inr hi₂'),
+      exact absurd hi₁ hni₁,
+    exact or.inr hi₃,
+  replace heq, exact congr_arg list.length heq,
+  rw length_append at heq ⊢,
+  unfold list.length at hl heq ⊢,
+  rw heq at hl,
+  rw ←add_assoc at hl,
+  unfold lt at hl ⊢,
+  exact nat.le_of_succ_le_succ hl,
 end
+
+end pigeon
 
 /-
 Require Export Coq.Strings.Ascii.
 Definition string := list ascii.
 -/
 
+/-
+TODO: explain this
+-/
 def str := list char
 instance : has_append str := ⟨list.append⟩
 
@@ -2755,7 +2339,7 @@ Proof.
 Qed.
 -/
 
-lemma provable_equiv_true {P : Prop} (p : P) : P ↔ tt :=
+lemma iff_true_intro (p : P) : P ↔ true :=
 begin
   split,
     intro,
@@ -2774,13 +2358,12 @@ Proof.
 Qed.
 -/
 
-lemma not_equiv_false {P : Prop} (np : ¬P) : (P ↔ ff) :=
+lemma iff_false_intro (np : ¬P) : (P ↔ false) :=
 begin
   split,
-    intro,
-    contradiction,
-  intro,
-  contradiction,
+    apply np,
+  intro h,
+  cases h,
 end
 
 /-
@@ -2792,9 +2375,9 @@ Proof.
 Qed.
 -/
 
-lemma null_matches_none (s : str) : EmptySet =~ s ↔ ff :=
+lemma null_matches_none : s =~ EmptySet ↔ false :=
 begin
-  apply not_equiv_false,
+  apply iff_false_intro,
   by_contra c,
   cases c,
 end
@@ -2808,7 +2391,7 @@ Proof.
 Qed.
 -/
 
-lemma empty_matches_eps (s : str) : EmptyStr =~ s ↔ s = [] :=
+lemma empty_matches_eps : s =~ EmptyStr ↔ s = [] :=
 begin
   split,
     intro h,
@@ -2828,11 +2411,13 @@ Proof.
 Qed.
 -/
 
-lemma empty_nomatch_ne (a : char) (s) : EmptyStr =~ a::s ↔ ff :=
+lemma empty_nomatch_ne : a::s =~ EmptyStr ↔ false :=
 begin
-  apply not_equiv_false,
+  apply iff_false_intro,
+  generalize heq : a::s = re,
   by_contra c,
   cases c,
+  cases heq,
 end
 
 /-
@@ -2849,13 +2434,15 @@ Proof.
 Qed.
 -/
 
-lemma char_nomatch_char {a b} (s : str) (hne : b ≠ a)
-  : Char a =~ b::s ↔ ff :=
+lemma char_nomatch_char {b} (hne : b ≠ a) : b::s =~ Char a ↔ false :=
 begin
-  apply not_equiv_false,
+  apply iff_false_intro,
+  generalize heq : b::s = re,
   by_contra c,
+  apply hne,
   cases c,
-  contradiction,
+  cases heq,
+  refl,
 end
 
 /-
@@ -2867,11 +2454,13 @@ Proof.
 Qed.
 -/
 
-lemma char_eps_suffix (a : char) (s) : Char a =~ a::s ↔ s = [] :=
+lemma char_eps_suffix : a::s =~ Char a ↔ s = [] :=
 begin
   split,
+    generalize heq : a::s = re,
     intro h,
     cases h,
+    cases heq,
     refl,
   intro h,
   rw h,
@@ -2893,21 +2482,15 @@ Proof.
 Qed.
 -/
 
-lemma app_exists (s: str) (re₀ re₁)
-  : App re₀ re₁ =~ s ↔
-    ∃s₀ s₁, s = s₀ ++ s₁ ∧ re₀ =~ s₀ ∧ re₁ =~ s₁ :=
+lemma app_exists
+  : s =~ App re₀ re₁ ↔
+    ∃s₀ s₁, s = s₀ ++ s₁ ∧ s₀ =~ re₀ ∧ s₁ =~ re₁ :=
 begin
   split,
-    intro h,
-    with_cases {cases h},
-    case : s₁ s₂ h₁ h₂ {
-      exact ⟨s₁, s₂, rfl, h₁, h₂⟩,
-    },
-  intro h,
-  cases h with w₁ h,
-  cases h with w₂ h,
-  rw h.left,
-  exact MApp h.right.left h.right.right,
+    rintro (_ | _ | ⟨s₁, re₁, s₂, re₂, h₁, h₂⟩),
+    exact ⟨s₁, s₂, rfl, h₁, h₂⟩,
+  rintro ⟨w₁, w₂, rfl, hl, hr⟩,
+  exact MApp hl hr,
 end
 
 /-
@@ -2919,81 +2502,27 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- use the previous lemma -/
-/- suggest even says so for ← -/
-
-lemma app_ne (a : char) (s re₀ re₁)
-  : App re₀ re₁ =~ a::s ↔
-    re₀ =~ [] ∧ re₁ =~ a::s ∨
-    ∃s₀ s₁, s = s₀ ++ s₁ ∧ re₀ =~ a::s₀ ∧ re₁ =~ s₁ :=
+lemma app_ne
+  : a::s =~ App re₀ re₁ ↔
+    [] =~ re₀ ∧ a::s =~ re₁ ∨
+    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a::s₀ =~ re₀ ∧ s₁ =~ re₁ :=
 begin
   split,
     intro h,
     rw app_exists at h,
-    cases h with w₀ h,
-    cases h with w₁ h,
-      cases w₀ with h₀ t₀,
-      cases h with hl hr,
-      simp at hl,
+    rcases h with ⟨_ | ⟨h₀, t₀⟩, w₁, hl, hr⟩,
+      rw nil_append at hl,
       rw ←hl at hr,
       exact or.inl hr,
-    cases h with hl hr,
     injection hl with hll hlr,
     cases hr with hrl hrr,
     rw ←hll at hrl,
     exact or.inr ⟨t₀, w₁, hlr, hrl, hrr⟩,
-  intro h,
   rw app_exists,
-  cases h,
-    cases h with hl hr,
+  rintro (⟨hl, hr⟩ | ⟨w₀, w₁, rfl, hl, hr⟩),
     exact ⟨[], a::s, rfl, hl, hr⟩,
-  cases h with w₀ h,
-  cases h with w₁ h,
-  cases h with hl hr,
-  cases hr with hm hr,
-  rw hl,
-  /- for the heck of it. existsi works -/
-  existsi [a::w₀, w₁],
-  exact ⟨rfl, hm, hr⟩,
+  use [a::w₀, w₁, rfl, hl, hr],
 end
-
-/- this might eventually work, but it was clearly the wrong path -/
-
--- lemma app_ne (a : char) (s re₀ re₁)
---   : App re₀ re₁ =~ a::s ↔
---     re₀ =~ [] ∧ re₁ =~ a::s ∨
---     ∃s₀ s₁, s = s₀ ++ s₁ ∧ re₀ =~ a::s₀ ∧ re₁ =~ s₁ :=
--- begin
---   split,
---     generalize heq : a::s = s',
---     intro h,
---     with_cases {cases h},
---     case : s₁ s₂ h₁ h₂ {
---       induction h₁ generalizing s re₁ s₂,
---       case MEmpty {
---         simp,
---         exact or.inl ⟨MEmpty, h₂⟩,
---       },
---       case MChar : h₁' {
---         injection heq with heq₁ heq₂,
---         generalize heq' : Char h₁' = ch₁,
---         generalize heq'' : list.append [h₁'] s₂ = lh₁,
---         rw [heq', heq''] at h,
---         with_cases {cases h},
---         case : s₁' s₂' h₁' h₂' {
---           simp at heq₂,
---           rw [←heq', ←heq''] at *,
---           rw [←heq₁, ←heq₂] at *,
---           rw [←heq₂] at h₂, /- why doesn't this get rewritten by *? -/
---           exact or.inr ⟨[], s, rfl, MChar a, h₂⟩,
---         },
---       },
---       case MApp : s₁' re₁' s₂' re₂' h₁' h₂' ih₁ ih₂ {
-
---         exact or.inr ⟨⟩,
---       },
---     }
--- end
 
 /-
 Lemma union_disj : ∀(s : string) re0 re1,
@@ -3009,8 +2538,7 @@ Proof.
 Qed.
 -/
 
-lemma union_disj (s : str) (re₀ re₁)
-  : Union re₀ re₁ =~ s ↔ re₀ =~ s ∨ re₁ =~ s :=
+lemma union_disj : s =~ Union re₀ re₁ ↔ s =~ re₀ ∨ s =~ re₁ :=
 begin
   split,
     intro h,
@@ -3031,16 +2559,20 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma star_ne (a : char) (s re)
-  : Star re =~ a::s ↔
-    ∃s₀ s₁, s = s₀ ++ s₁ ∧ re =~ a::s₀ ∧ Star re =~ s₁ :=
+/-
+TODO: examine whether it's reasonable to use
+all_goals { try { contradiction } } here
+-/
+
+lemma star_ne
+  : a::s =~ Star re ↔
+    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a::s₀ =~ re ∧ s₁ =~ Star re :=
 begin
   split,
     generalize heq : a::s = s',
     generalize heq' : Star re = re',
     intro h,
     induction h,
-    all_goals { try { contradiction, } },
     case MStarApp : s₁ s₂ re'' h₁ h₂ ih₁ ih₂ {
       rw ←heq' at *,
       cases s₁,
@@ -3056,12 +2588,15 @@ begin
         exact ⟨tl, s₂, heq₂, h₁, h₂⟩,
       },
     },
-  intro h,
-  cases h with w₀ h,
-  cases h with w₁ h,
-  rw h.left,
+    case MEmpty { cases heq, },
+    case MChar { cases heq', },
+    case MApp { cases heq', },
+    case MUnionL { cases heq', },
+    case MUnionR { cases heq', },
+    case MStar0 { cases heq, },
+  rintro ⟨w₀, w₁, rfl, hl, hr⟩,
   rw ←cons_append,
-  exact MStarApp h.right.left h.right.right,
+  exact MStarApp hl hr,
 end
 
 /-
@@ -3069,14 +2604,14 @@ Definition refl_matches_eps m :=
   ∀re : @reg_exp ascii, reflect ([ ] =~ re) (m re).
 -/
 
-def refl_matches_eps (m : reg_exp char → bool) := ∀re, reflect' (re =~ []) (m re)
+def refl_matches_eps (m : @reg_exp α → bool) := ∀re, reflect ([] =~ re) (m re)
 
 /-
 Fixpoint match_eps (re: @reg_exp ascii) : bool
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-def match_eps : reg_exp char → bool
+def match_eps : @reg_exp α → bool
 | EmptyStr := tt
 | (Union re₁ re₂) := match_eps re₁ || match_eps re₂
 | (Star _) := tt
@@ -3089,104 +2624,90 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- yeah, lean does not do well here -/
 
-lemma match_eps_refl : refl_matches_eps match_eps :=
+lemma append_eq_nil {ll lr : list α} (h : [] = ll ++ lr): ll = [] ∧ lr = [] :=
+begin
+  cases ll with a ll,
+    rw nil_append at h,
+    rw h,
+    use [rfl, rfl],
+  cases h,
+end
+
+/- yeah, lean does not do well here -/
+lemma match_eps_refl : @refl_matches_eps α match_eps :=
 begin
   unfold refl_matches_eps,
   intro re,
   induction re,
   case EmptySet {
-    constructor,
-    by_contra c,
-    cases c,
+    unfold match_eps,
+    apply ReflectF,
+    rw null_matches_none,
+    exact not_false,
   },
   case EmptyStr {
-    constructor,
+    unfold match_eps,
+    apply ReflectT,
     exact MEmpty,
   },
-  case Char {
-    constructor,
+  case Char : a {
+    unfold match_eps,
+    apply ReflectF,
+    generalize heq : [] = s,
     by_contra c,
     cases c,
+    cases heq,
   },
   case App : re₁ re₂ ih₁ ih₂ {
-    generalize heq₁ : (re₁ =~ []) = re₁',
+    revert_after re₂,
+    generalize heq₁ : ([] =~ re₁) = re₁',
     generalize hmeq₁ : match_eps re₁ = m₁',
-    rw [heq₁, hmeq₁] at ih₁,
-    generalize heq₂ : (re₂ =~ []) = re₂',
+    generalize heq₂ : ([] =~ re₂) = re₂',
     generalize hmeq₂ : match_eps re₂ = m₂',
-    rw [heq₂, hmeq₂] at ih₂,
     unfold match_eps,
+    intros,
     cases ih₁,
     case ReflectT : ih₁' {
       rw ←heq₁ at ih₁',
       cases ih₂,
       case ReflectT : ih₂' {
         rw [hmeq₁, hmeq₂],
-        simp,
+        apply ReflectT,
         rw ←heq₂ at ih₂',
-        exact ReflectT (MApp ih₁' ih₂'),
+        exact MApp ih₁' ih₂',
       },
       case ReflectF : ih₂' {
         rw [hmeq₁, hmeq₂],
-        simp,
-        rw ←heq₂ at ih₂',
         apply ReflectF,
-        by_contra c,
-        generalize hc : App re₁ re₂ = c',
-        generalize hc' : (nil : str) = n,
-        rw [hc, hc'] at c,
-        cases c,
-        all_goals { try { contradiction, } },
-        case MApp : s₁ re₁'' s₂ re₂'' h₁ h₂ {
-          injection hc with hcl hcr,
-          rw ←hcr at h₂,
-          have : s₂ = nil,
-            cases s₁,
-              symmetry,
-              exact hc',
-            contradiction,
-          rw this at h₂,
-          contradiction,
-        },
+        rw ←heq₂ at ih₂',
+        generalize heq : [] = s,
+        rintro (_ | _ | ⟨s₁, re₁, s₂, re₂, h₁, h₂⟩),
+        rcases append_eq_nil heq with ⟨rfl, rfl⟩,
+        exact absurd h₂ ih₂',
       },
     },
     case ReflectF : ih₁' {
       rw ←heq₁ at ih₁',
       rw [hmeq₁, hmeq₂],
-      simp,
       apply ReflectF,
-      by_contra c,
-      generalize hc : App re₁ re₂ = c',
-      generalize hc' : (nil : str) = n,
-      rw [hc, hc'] at c,
-      cases c,
-      all_goals { try { contradiction, } },
-      case MApp : s₁ re₁'' s₂ re₂'' h₁ h₂ {
-        injection hc with hcl hcr,
-        rw ←hcl at h₁,
-        have : s₁ = nil,
-          cases s₁,
-            refl,
-          contradiction,
-        rw this at h₁,
-        contradiction,
-      },
+      generalize heq : [] = s,
+      rintro (_ | _ | ⟨s₁, re₁, s₂, re₂, h₁, h₂⟩),
+      rcases append_eq_nil heq with ⟨rfl, rfl⟩,
+      exact absurd h₁ ih₁',
     },
   },
   case Union : re₁ re₂ ih₁ ih₂ {
-    generalize heq₁ : (re₁ =~ []) = re₁',
+    revert_after re₂,
+    generalize heq₁ : ([] =~ re₁) = re₁',
     generalize hmeq₁ : match_eps re₁ = m₁',
-    rw [heq₁, hmeq₁] at ih₁,
-    generalize heq₂ : (re₂ =~ []) = re₂',
+    generalize heq₂ : ([] =~ re₂) = re₂',
     generalize hmeq₂ : match_eps re₂ = m₂',
-    rw [heq₂, hmeq₂] at ih₂,
     unfold match_eps,
+    intros,
     cases ih₁,
     case ReflectT : ih₁' {
       rw [hmeq₁, hmeq₂],
-      simp,
       rw ←heq₁ at ih₁',
       exact ReflectT (MUnionL re₂ ih₁'),
     },
@@ -3195,31 +2716,17 @@ begin
       cases ih₂,
       case ReflectT : ih₂' {
         rw [hmeq₁, hmeq₂],
-        simp,
         rw ←heq₂ at ih₂',
         exact ReflectT (MUnionR re₁ ih₂'),
       },
       case ReflectF : ih₂' {
         rw [hmeq₁, hmeq₂],
-        simp,
         rw ←heq₂ at ih₂',
         apply ReflectF,
-        by_contra c,
-        generalize hc : Union re₁ re₂ = c',
-        generalize hc' : (nil : str) = n,
-        rw [hc, hc'] at c,
-        cases c,
-        all_goals { try { contradiction, } },
-        case MUnionL : _ re₁'' re₂'' h {
-          injection hc with hcl hcr,
-          rw [←hcl, ←hc'] at h,
-          contradiction,
-        },
-        case MUnionR : _ re₁'' re₂'' h {
-          injection hc with hcl hcr,
-          rw [←hcr, ←hc'] at h,
-          contradiction,
-        }
+        rw union_disj,
+        rintro (c | c),
+          exact absurd c ih₁',
+        exact absurd c ih₂',
       },
     },
   },
@@ -3234,22 +2741,23 @@ Definition is_der re (a : ascii) re' :=
   ∀s, a :: s =~ re ↔ s =~ re'.
 -/
 
-def is_der (re) (a : char) (re') :=
-  ∀s, re =~ a::s ↔ re' =~ s
+def is_der (a : α) (re₀ re₁) := ∀s, a::s =~ re₀ ↔ s =~ re₁
 
 /-
 Definition derives d := ∀a re, is_der re a (d a re).
 -/
 
-def derives (d : char → reg_exp char → reg_exp char) :=
-  ∀a re, is_der re a (d a re)
+def derives (d : α → @reg_exp α → @reg_exp α) := ∀a re, is_der a re (d a re)
 
 /-
 Fixpoint derive (a : ascii) (re : @reg_exp ascii) : @reg_exp ascii
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-def derive (a : char) : reg_exp char → reg_exp char
+/-
+TODO: look into deciable eq
+-/
+def derive (a : char) : @reg_exp char → @reg_exp char
 | EmptySet := EmptySet
 | EmptyStr := EmptySet
 | (Char a') := if a = a' then EmptyStr else EmptySet
@@ -3322,8 +2830,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-example : match_eps (derive d (derive c (App (Char c) (Char d)))) = tt :=
-  by simp [derive, match_eps]
+example : match_eps (derive d (derive c (App (Char c) (Char d)))) = tt := rfl
 
 /-
 Example test_der7 :
@@ -3340,75 +2847,79 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
+/-
+TODO: is this a good spot to introduce refine?
+-/
 lemma derive_corr : derives derive :=
 begin
   unfold derives,
   unfold is_der,
   intros,
   split,
+    generalize heq : a::s = s',
     intro h,
-    induction re generalizing s,
+    induction re generalizing s s',
     case EmptySet { cases h, },
-    case EmptyStr { cases h, },
+    case EmptyStr {
+      cases h,
+      cases heq,
+    },
     case Char {
       cases h,
+      cases heq,
       unfold derive,
-      simp,
+      simp only [if_true, eq_self_iff_true],
       exact MEmpty,
     },
     case App : re₁ re₂ ih₁ ih₂ {
       unfold derive,
-      rw app_ne at h,
+      rw [←heq, app_ne] at h,
       have, exact match_eps_refl re₁,
-      generalize heq : (re₁ =~ []) = re₁',
-      rw heq at this,
-      generalize heq' : match_eps re₁ = me',
-      rw heq' at this,
-      cases h,
-        /-
-        TODO - try using reflect in earlier exercises like this
-        -/
+      revert this,
+      generalize heq' : ([] =~ re₁) = re₁',
+      generalize heq'' : match_eps re₁ = me',
+      intro,
+      rcases h with ⟨h₁, h₂⟩ | ⟨s₀, s₁, rfl, h₁, h₂⟩,
         cases this,
         case ReflectT : this {
-          simp,
-          exact MUnionR _ (ih₂ s h.right),
+          simp only [if_true, bool.coe_sort_tt],
+          apply MUnionR,
+          exact ih₂ s (a::s) rfl h₂,
         },
         case ReflectF : this {
-          rw ←heq at this,
+          rw ←heq' at this,
           cases this with hl hr,
-          exact absurd h.left hr,
+          exact absurd h₁ hr,
         },
       cases this,
       case ReflectT : this {
-        simp,
-        cases h with s₀ h,
-        cases h with s₁ h,
         apply MUnionL,
-        rw app_exists _ _ _,
-        exact ⟨s₀, s₁, h.left, ih₁ _ h.right.left, h.right.right⟩,
+        rw app_exists,
+        refine ⟨s₀, s₁, rfl, _, h₂⟩,
+        exact ih₁ s₀ (a::s₀) rfl h₁,
       },
       case ReflectF : this {
-        simp,
-        cases h with s₀ h,
-        cases h with s₁ h,
-        rw app_exists _ _ _,
-        exact ⟨s₀, s₁, h.left, ih₁ _ h.right.left, h.right.right⟩,
+        simp only [bool.coe_sort_ff, if_false],
+        rw app_exists,
+        refine ⟨s₀, s₁, rfl, _, h₂⟩,
+        exact ih₁ s₀ (a::s₀) rfl h₁,
       },
     },
     case Union : re₁ re₂ ih₁ ih₂ {
       unfold derive,
-      rw union_disj at h,
-      cases h,
-        exact MUnionL _ (ih₁ _ h),
-      exact MUnionR _ (ih₂ _ h),
+      rcases union_disj.mp h with h | h,
+        apply MUnionL,
+        exact ih₁ s s' heq h,
+      apply MUnionR,
+      exact ih₂ s s' heq h,
     },
     case Star : re ih {
       unfold derive,
-      rw star_ne at h,
-      cases h with s₀ h,
-      cases h with s₁ h,
+      rw [←heq, star_ne] at h,
+      rcases h with ⟨s₀, s₁, rfl, h₁, h₂⟩,
       rw app_exists,
-      exact ⟨s₀, s₁, h.left, ih _ h.right.left, h.right.right⟩,
+      refine ⟨s₀, s₁, rfl, _, h₂⟩,
+      exact ih s₀ (a::s₀) rfl h₁,
     },
   intro h,
   induction re generalizing s,
@@ -3423,44 +2934,39 @@ begin
     unfold ite at h,
     cases h,
     rw h',
-    constructor,
+    exact MChar re,
   },
   case App : re₁ re₂ ih₁ ih₂ {
     unfold derive at h,
     rw app_ne,
     cases hm : match_eps re₁,
-      simp * at h,
-      rw app_exists at h,
-      cases h with s₀ h,
-      cases h with s₁ h,
-      exact or.inr ⟨_, _, h.left, ih₁ _ h.right.left, h.right.right⟩,
-    simp * at h,
+      rw hm at h,
+      simp only [bool.coe_sort_ff, if_false] at h,
+      rcases app_exists.mp h with ⟨s₀, s₁, rfl, h₁, h₂⟩,
+      exact or.inr ⟨s₀, s₁, rfl, ih₁ s₀ h₁, h₂⟩,
+    rw hm at h,
+    simp only [if_true, bool.coe_sort_tt] at h,
     rw union_disj at h,
     cases h,
-      rw app_exists at h,
-      cases h with s₀ h,
-      cases h with s₁ h,
-      exact or.inr ⟨_, _, h.left, ih₁ _ h.right.left, h.right.right⟩,
+      rcases app_exists.mp h with ⟨s₀, s₁, rfl, h₁, h₂⟩,
+      exact or.inr ⟨s₀, s₁, rfl, ih₁ s₀ h₁, h₂⟩,
     have, exact match_eps_refl re₁,
     rw hm at this,
     cases this with this,
-    exact or.inl ⟨this, ih₂ _ h⟩,
+    exact or.inl ⟨this, ih₂ s h⟩,
   },
   case Union : re₁ re₂ ih₁ ih₂ {
     unfold derive at h,
-    rw union_disj at h,
-    rw union_disj,
+    rw union_disj at h ⊢,
     cases h,
-      exact or.inl (ih₁ _ h),
-    exact or.inr (ih₂ _ h),
+      exact or.inl (ih₁ s h),
+    exact or.inr (ih₂ s h),
   },
   case Star : re ih {
     unfold derive at h,
-    rw app_exists at h,
-    cases h with s₀ h,
-    cases h with s₁ h,
+    rcases app_exists.mp h with ⟨s₀, s₁, rfl, h₁, h₂⟩,
     rw star_ne,
-    exact ⟨_, _, h.left, ih _ h.right.left, h.right.right⟩,
+    exact ⟨s₀, s₁, rfl, ih s₀ h₁, h₂⟩,
   },
 end
 
@@ -3469,15 +2975,15 @@ Definition matches_regex m : Prop :=
   ∀(s : string) re, reflect (s =~ re) (m s re).
 -/
 
-def matches_regex (m : str → reg_exp char → bool) :=
-  ∀s re, reflect' (re =~ s) (m s re)
+def matches_regex (m : list α → @reg_exp α → bool) :=
+  ∀s re, reflect (s =~ re) (m s re)
 
 /-
 Fixpoint regex_match (s : string) (re : @reg_exp ascii) : bool
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-def regex_match : str → reg_exp char → bool
+def regex_match : str → @reg_exp char → bool
 | [] r := match_eps r
 | (c::s) r := regex_match s (derive c r)
 
@@ -3491,11 +2997,11 @@ theorem regex_refl : matches_regex regex_match :=
 begin
   unfold matches_regex,
   intros,
-  induction s generalizing re,
-  case nil { exact match_eps_refl re, },
-  case cons : hd tl ih {
-    rw derive_corr,
-    unfold regex_match,
-    exact ih (derive hd re),
-  },
+  induction s with a s ih generalizing re,
+    exact match_eps_refl re,
+  rw derive_corr,
+  unfold regex_match,
+  exact ih (derive a re),
 end
+
+end indprop
