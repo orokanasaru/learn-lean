@@ -1042,8 +1042,7 @@ Example succ_3 : succ two = three.
 Proof. (* FILL IN HERE *) Admitted.
 -/
 
-def succ (n : cnat) : cnat :=
-  λα f x, f (n α f x)
+def succ (n : cnat) : cnat := λα f x, f (n α f x)
 
 example : succ zero = one := rfl
 
@@ -1066,15 +1065,13 @@ Example plus_3 :
 Proof. (* FILL IN HERE *) Admitted.
 -/
 
-def plus (m n : cnat) : cnat :=
-  λα f x, m α f (n α f x)
+def plus (m n : cnat) : cnat := λα f x, m α f (n α f x)
 
 example : plus zero one = one := rfl
 
 example : plus two three = plus three two := rfl
 
-example : plus (plus two two) three
-  = plus one (plus three three) := rfl
+example : plus (plus two two) three = plus one (plus three three) := rfl
 
 /-
 Definition mult (n m : cnat) : cnat
@@ -1090,8 +1087,7 @@ Example mult_3 : mult two three = plus three three.
 Proof. (* FILL IN HERE *) Admitted.
 -/
 
-def mult (m n : cnat) : cnat :=
-  λα f x, m α (n α f) x
+def mult (m n : cnat) : cnat := λα f x, m α (n α f) x
 
 example : mult one one = one := rfl
 
@@ -1113,20 +1109,12 @@ Example exp_3 : exp three two = plus (mult two (mult two two)) one.
 Proof. (* FILL IN HERE *) Admitted.
 -/
 
-/- exp is taken -/
-/-
-holy fuck, mind blowing even after
-giving up and reading the wiki article
-using untyped lambda calculus
--/
-def ex (m n : cnat) : cnat :=
-  λα f x, n (α → α) (m α) f x
+def exp (m n : cnat) : cnat :=  λα f x, n (α → α) (m α) f x
 
-example : ex two two = plus two two := rfl
+example : exp two two = plus two two := rfl
 
-example : ex three zero = one := rfl
+example : exp three zero = one := rfl
 
-example : ex three two =
-  plus (mult two (mult two two)) one := rfl
+example : exp three two = plus (mult two (mult two two)) one := rfl
 
 end poly
