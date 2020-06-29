@@ -1,6 +1,15 @@
 import tactic.basic
 import .ch07_indprop
 
+open indprop (reflect)
+open indprop.reflect
+
+variables {α : Type}
+variables {a : α}
+variables {s x y : string}
+
+namespace maps
+
 /-
 From Coq Require Import Arith.Arith.
 From Coq Require Import Bool.Bool.
@@ -9,8 +18,6 @@ From Coq Require Import Logic.FunctionalExtensionality.
 From Coq Require Import Lists.List.
 Import ListNotations.
 -/
-
-/- i think that's all just lean prelude stuff -/
 
 /-
 Definition eqb_string (x y : string) : bool :=
@@ -33,7 +40,7 @@ begin
   unfold eqb_string,
   /- need the name for cases but not ite -/
   cases string.has_decidable_eq s s with c h,
-    contradiction,
+    cases c rfl,
   refl,
 end
 
@@ -51,17 +58,20 @@ Proof.
 Qed.
 -/
 
-theorem eqb_string_true_iff (x y : string)
-  : eqb_string x y = tt ↔ x = y :=
+/-
+TODO: sf never explains subst
+-/
+
+theorem eqb_string_tt_iff : eqb_string x y = tt ↔ x = y :=
 begin
   unfold eqb_string,
   cases string.has_decidable_eq x y,
     unfold ite,
-    simp,
+    simp only [false_iff],
     exact h,
+  subst h,
   unfold ite,
-  rw h,
-  simp,
+  simp only [true_iff, eq_self_iff_true],
 end
 
 /-
@@ -72,11 +82,10 @@ Proof.
   rewrite not_true_iff_false. reflexivity. Qed.
 -/
 
-theorem eqb_string_false_iff (x y : string)
-  : eqb_string x y = ff ↔ x ≠ y :=
+theorem eqb_string_ff_iff : eqb_string x y = ff ↔ x ≠ y :=
 begin
   rw ne.def,
-  rw ←eqb_string_true_iff,
+  rw ←eqb_string_tt_iff,
   rw eq_ff_eq_not_eq_tt,
 end
 
@@ -88,8 +97,8 @@ Proof.
   intros H. apply H. Qed.
 -/
 
-theorem false_eqb_string (x y : string) (h : x ≠ y)
-  : eqb_string x y = ff := (eqb_string_false_iff x y).mpr h
+theorem ff_eqb_string (x y : string) (h : x ≠ y)
+  : eqb_string x y = ff := eqb_string_ff_iff.mpr h
 
 /-
 Definition total_map (A : Type) := string → A.
@@ -102,7 +111,7 @@ Definition t_empty {A : Type} (v : A) : total_map A :=
   (fun _ ⇒ v).
 -/
 
-def t_empty {α} (v) : total_map α := λ _, v
+def t_empty (v) : total_map α := λ_, v
 
 /-
 Definition t_update {A : Type} (m : total_map A)
@@ -110,8 +119,8 @@ Definition t_update {A : Type} (m : total_map A)
   fun x' ⇒ if eqb_string x x' then v else m x'.
 -/
 
-def t_update {α} (m : total_map α) (x) (v : α) :=
-  λ x', if eqb_string x x' then v else m x'
+def t_update (m : total_map α) (x) (v : α) :=
+  λx', if eqb_string x x' then v else m x'
 
 /-
 Definition examplemap :=
@@ -159,7 +168,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma t_apply_empty {α} (x) (v : α) : (__ !→ v) x = v := rfl
+lemma t_apply_empty (x) (v : α) : (__ !→ v) x = v := rfl
 
 /-
 Lemma t_update_eq : ∀(A : Type) (m : total_map A) x v,
@@ -168,12 +177,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma t_update_eq {α} (m x) (v : α)
-  : (x !→ v ; m) x = v :=
+lemma t_update_eq (m x) (v : α) : (x !→ v ; m) x = v :=
 begin
   unfold t_update,
   unfold eqb_string,
-  simp,
+  simp only [if_true, bool.coe_sort_tt, eq_self_iff_true],
 end
 
 /-
@@ -184,12 +192,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem t_update_neq {α} (m x₁ x₂) (v : α) (h : x₁ ≠ x₂)
+theorem t_update_neq (m x₁ x₂) (v : α) (h : x₁ ≠ x₂)
   : (x₁ !→ v ; m) x₂ = m x₂ :=
 begin
   unfold t_update,
   unfold eqb_string,
-  simp [h],
+  simp only [h, bool.coe_sort_ff, if_false],
 end
 
 /-
@@ -199,21 +207,18 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma t_update_shadow {α} (m x) (v₁ v₂ : α)
+lemma t_update_shadow (m x) (v₁ v₂ : α)
   : (x !→ v₂ ; x !→ v₁ ; m) = (x !→ v₂ ; m) :=
 begin
   unfold t_update,
   unfold eqb_string,
   funext,
   cases string.has_decidable_eq x x',
-    simp [h],
-  simp [h],
+    simp only [h, bool.coe_sort_ff, if_false],
+  simp only [h, if_true, bool.coe_sort_tt, eq_self_iff_true],
 end
 
-open reflect'
-
-lemma eqb_stringP (x y : string)
-  : reflect' (x = y) (eqb_string x y) :=
+lemma eqb_stringP (x y : string) : reflect (x = y) (eqb_string x y) :=
 begin
   unfold eqb_string,
   cases string.has_decidable_eq x y,
@@ -228,23 +233,19 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem t_update_same {α} (m : total_map α) (x)
-  : (x !→ m x ; m) = m :=
+theorem t_update_same (m : total_map α) (x) : (x !→ m x ; m) = m :=
 begin
   unfold t_update,
   funext,
-  have, exact eqb_stringP x x',
+  have hr, exact eqb_stringP x x',
+  revert hr,
   generalize heq : x = x' = h,
-  generalize heq' : eqb_string x x' = h',
-  rw [heq, heq'] at this,
-  cases this,
-  case ReflectT : this {
-    rw ←heq at this,
-    cases this with this,
-    subst this,
+  generalize heq' : eqb_string x x' = he,
+  intro,
+  cases hr with hr' hr',
+    subst_vars,
     refl,
-  },
-  case ReflectF : this { refl, },
+  refl,
 end
 
 /-
@@ -258,32 +259,25 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem t_update_permute {α} (m) (v₁ v₂ : α) (x₁ x₂) (h : x₂ ≠ x₁)
+theorem t_update_permute (m) (v₁ v₂ : α) (x₁ x₂) (h : x₂ ≠ x₁)
   : (x₁ !→ v₁ ; (x₂ !→ v₂ ; m)) = (x₂ !→ v₂ ; (x₁ !→ v₁ ; m)) :=
 begin
   unfold t_update,
   funext,
   have eqb₁, exact eqb_stringP x₁ x',
+  have eqb₂, exact eqb_stringP x₂ x',
+  revert_after x',
   generalize heq₁ : x₁ = x' = h₁,
   generalize heq₁' : eqb_string x₁ x' = h₁',
-  rw [heq₁, heq₁'] at eqb₁,
-  have eqb₂, exact eqb_stringP x₂ x',
   generalize heq₂ : x₂ = x' = h₂,
   generalize heq₂' : eqb_string x₂ x' = h₂',
-  rw [heq₂, heq₂'] at eqb₂,
-  cases eqb₁,
-  case ReflectT : eqb₁' {
-    simp,
-    cases eqb₂,
-    case ReflectT : eqb₂' {
-      rw ←heq₁ at eqb₁',
-      rw ←heq₂ at eqb₂',
-      rw ←eqb₁' at eqb₂',
-      contradiction,
-    },
-    case ReflectF : eqb₂ { refl, },
-  },
-  case ReflectF : eqb₁ { refl, },
+  intros,
+  cases eqb₁ with eqb₁' eqb₁',
+    cases eqb₂ with eqb₂' eqb₂',
+      subst_vars,
+      cases h rfl,
+    refl,
+  refl,
 end
 
 /-
@@ -299,9 +293,9 @@ Definition update {A : Type} (m : partial_map A)
 
 def partial_map (α) := total_map (option α)
 
-def empty' {α} : partial_map α := t_empty none
+def empty : partial_map α := t_empty none
 
-def update {α} (m x) (v : α) := (x !→ some v ; m)
+def update (m x) (v : α) := (x !→ some v ; m)
 
 /-
 Notation "x '⊢>' v ';' m" := (update m x v)
@@ -318,7 +312,7 @@ Example examplepmap :=
   ("Church" ⊢> true ; "Turing" ⊢> false).
 -/
 
-notation x ` |→ `:10 v := update empty' x v
+notation x ` |→ `:10 v := update empty x v
 
 /-
 Lemma apply_empty : ∀(A : Type) (x : string),
@@ -368,35 +362,33 @@ Proof.
 Qed.
 -/
 
-lemma apply_empty (α x) : @empty' α x = none :=
+lemma apply_empty (α x) : @empty α x = none :=
 begin
-  unfold empty',
+  unfold empty,
   rw t_apply_empty,
 end
 
-lemma update_eq {α} (m x) (v : α)
-  : (x |→ v ; m) x = some v :=
+lemma update_eq (m x) (v : α) : (x |→ v ; m) x = some v :=
 begin
   unfold update,
   rw t_update_eq,
 end
 
-theorem update_neq {α} (m x₁ x₂) (v : α) (h : x₂ ≠ x₁)
+theorem update_neq (m x₁ x₂) (v : α) (h : x₂ ≠ x₁)
   : (x₂ |→ v ; m) x₁ = m x₁ :=
 begin
   unfold update,
-  rw t_update_neq,
-  exact h,
+  rwa t_update_neq,
 end
 
-theorem update_shadow {α} (m x) (v₁ v₂ : α)
+theorem update_shadow (m x) (v₁ v₂ : α)
   : (x |→ v₂ ; x |→ v₁ ; m) = (x |→ v₂ ; m) :=
 begin
   unfold update,
   rw t_update_shadow,
 end
 
-theorem update_same {α} (m : partial_map α) (x v) (h : m x = some v)
+theorem update_same (m : partial_map α) (x v) (h : m x = some v)
   : (x |→ v ; m) = m :=
 begin
   unfold update,
@@ -404,10 +396,11 @@ begin
   rw t_update_same,
 end
 
-theorem update_permute {α} (m x₁ x₂) (v₁ v₂ : α) (h : x₂ ≠ x₁)
+theorem update_permute (m x₁ x₂) (v₁ v₂ : α) (h : x₂ ≠ x₁)
   : (x₁ |→ v₁ ; x₂ |→ v₂ ; m) = (x₂ |→ v₂ ; x₁ |→ v₁ ; m) :=
 begin
   unfold update,
-  rw t_update_permute,
-  exact h,
+  rwa t_update_permute,
 end
+
+end maps

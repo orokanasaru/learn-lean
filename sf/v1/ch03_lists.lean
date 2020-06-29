@@ -821,6 +821,10 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
+/-
+TODO: explain rwa
+-/
+
 lemma nonzeros_append (l₁ l₂ : natlist) :
   nonzeros (l₁ ++ l₂) = (nonzeros l₁) ++ (nonzeros l₂) :=
 begin
