@@ -119,7 +119,12 @@ Definition ev_8' : even 8
   (* REPLACE THIS LINE WITH ":= _your_definition_ ." *). Admitted.
 -/
 
-theorem even_eight : even 8 := by { repeat { constructor, }, }
+theorem even_eight : even 8 :=
+begin
+  apply ev_ss,
+  apply ev_ss,
+  exact even_four,
+end
 
 def ev_8' : even 8 := ev_ss (ev_ss even_four)
 

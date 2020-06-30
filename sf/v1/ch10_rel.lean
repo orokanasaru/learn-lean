@@ -1,6 +1,18 @@
 import tactic.basic
 import .ch07_indprop
 
+open nat (
+  le less_than_or_equal.refl less_than_or_equal.step lt
+)
+
+open indprop (next_nat total_relation total_relation.intro)
+open indprop.next_nat
+
+variables {α : Type}
+variables {n m o p: ℕ}
+
+namespace rel
+
 /-
 Definition relation (X: Type) := X → X → Prop.
 -/
@@ -17,19 +29,18 @@ Check le : nat → nat → Prop.
 Check le : relation nat.
 -/
 
-/- a bit different -/
-#print has_le.le
+#print le
 
-#check (has_le.le : ℕ → ℕ → Prop)
-#check (has_le.le : relation ℕ)
+#check (le : ℕ → ℕ → Prop)
+#check (le : relation ℕ)
 
 /-
 Definition partial_function {X: Type} (R: relation X) :=
   ∀x y1 y2 : X, R x y1 → R x y2 → y1 = y2.
 -/
 
-def partial_function {α} (R : relation α) :=
-  ∀ {x y₁ y₂} (h₁ : R x y₁) (h₂ : R x y₂), y₁ = y₂
+def partial_function (R : relation α) :=
+  ∀{x y₁ y₂} (h₁ : R x y₁) (h₂ : R x y₂), y₁ = y₂
 
 /-
 Print next_nat.
@@ -72,29 +83,26 @@ Proof.
   discriminate Nonsense. Qed.
 -/
 
-open nat
-
-theorem le_not_a_partial_function : ¬partial_function less_than_or_equal :=
+theorem le_not_a_partial_function : ¬partial_function le :=
 begin
+  unfold partial_function,
   by_contradiction c,
-  unfold partial_function at c,
-  have : 0 = 1,
+  have nonsense : 0 = 1,
     apply @c 0 0 1,
       apply less_than_or_equal.refl,
     apply less_than_or_equal.step,
     apply less_than_or_equal.refl,
-  contradiction,
+  cases nonsense,
 end
 
 theorem total_relation_not_partial : ¬partial_function total_relation :=
 begin
+  unfold partial_function,
   by_contradiction c,
-  unfold partial_function at c,
-  have, exact c (total_relation.intro 0 0) (total_relation.intro 0 1),
-  contradiction,
+  cases c (total_relation.intro 0 0) (total_relation.intro 0 1),
 end
 
-theorem empty_relation_partial : partial_function empty_relation' :=
+theorem empty_relation_partial : partial_function (@empty_relation α) :=
 begin
   unfold partial_function,
   intros,
@@ -111,16 +119,13 @@ Proof.
   unfold reflexive. intros n. apply le_n. Qed.
 -/
 
-def reflexive' {α} (R : relation α) :=
-  ∀a, R a a
+def reflexive (R : relation α) := ∀a, R a a
 
-open le
-
-theorem le_reflexive : reflexive le :=
+theorem le_refl : reflexive le :=
 begin
   unfold reflexive,
-  intro,
-  apply le_n,
+  intro n,
+  apply less_than_or_equal.refl,
 end
 
 /-
@@ -146,26 +151,26 @@ Proof.
   apply Hmo. Qed.
 -/
 
-def transitive' {α} (R : relation α) :=
-  ∀ {a b c : α} (hab : R a b) (hbc : R b c), R a c
+#check transitive
 
-theorem le_trans'' : transitive' le :=
+def transitive (R : relation α) :=
+  ∀{a b c : α} (hab : R a b) (hbc : R b c), R a c
+
+theorem le_trans: transitive le :=
 begin
-  unfold transitive',
+  unfold transitive,
   intros,
-  induction hbc,
-  case le_n { exact hab, },
-  case le_s : n m h ih {
-    apply le_s,
-    exact ih hab,
-  },
+  induction hbc with b' h ih,
+    exact hab,
+  apply less_than_or_equal.step,
+  exact ih,
 end
 
-theorem lt_trans' : transitive' lt :=
+theorem lt_trans : transitive lt :=
 begin
-  unfold transitive' lt,
+  unfold transitive,
   intros,
-  exact le_trans'' (le_s hab) hbc,
+  exact le_trans (less_than_or_equal.step hab) hbc,
 end
 
 /-
@@ -179,20 +184,13 @@ Proof.
     (* FILL IN HERE *) Admitted.
 -/
 
-theorem lt_trans''' : transitive' lt :=
+theorem lt_trans' : transitive lt :=
 begin
-  unfold transitive' lt,
+  unfold transitive,
   intros,
-  generalize heq : succ b = b',
-  rw heq at hbc,
-  induction hbc,
-  case le_n {
-    rw ←heq,
-    exact le_s hab,
-  },
-  case le_s : b' c' h ih {
-    exact le_s (ih heq),
-  },
+  induction hbc with b' h ih,
+    exact less_than_or_equal.step hab,
+  exact less_than_or_equal.step ih,
 end
 
 /-
@@ -205,15 +203,15 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem lt_trans'''' : transitive' lt :=
+theorem lt_trans'' : transitive lt :=
 begin
-  unfold transitive' lt,
+  unfold transitive,
   intros,
-  induction c with c' ih,
+  induction c with c ih,
     cases hbc,
-  cases hbc with _ _ _ h,
-    exact le_s hab,
-  exact le_s (ih h),
+  cases hbc with _ h,
+    exact less_than_or_equal.step hab,
+  exact less_than_or_equal.step (ih h),
 end
 
 /-
@@ -225,10 +223,11 @@ Proof.
 Qed.
 -/
 
-theorem le_Sn_le {n m} (h : succ n ≤' m) : n ≤' m :=
+theorem nat.le_of_succ_le (h : n + 1 ≤ m) : n ≤ m :=
 begin
-  apply le_trans'',
-    exact le_s (le_n n),
+  apply le_trans,
+    apply less_than_or_equal.step,
+    apply less_than_or_equal.refl,
   exact h,
 end
 
@@ -239,11 +238,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem le_S_n {n m} (h : succ n ≤' succ m) : n ≤' m :=
+theorem nat.le_of_succ_le_succ (h : n + 1 ≤ m + 1) : n ≤ m :=
 begin
-  cases h with _ _ _ h,
-    apply le_n,
-  exact le_Sn_le h,
+  cases h with _ h,
+    exact less_than_or_equal.refl,
+  exact nat.le_of_succ_le h,
 end
 
 /-
@@ -253,14 +252,12 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/- induction c leads to fun -/
-
-theorem le_Sn_n (n) : ¬(succ n ≤' n) :=
+theorem nat.not_succ_le_self (n) : ¬(n + 1 ≤ n) :=
 begin
   by_contra c,
-  induction n with n' ih,
+  induction n with n ih,
     cases c,
-  exact ih (le_S_n c),
+  exact ih (nat.le_of_succ_le_succ c),
 end
 
 /-
@@ -268,8 +265,7 @@ Definition symmetric {X: Type} (R: relation X) :=
   ∀a b : X, (R a b) → (R b a).
 -/
 
-def symmetric' {α} (R : relation α) :=
-  ∀ {a b : α} (h : R a b), R b a
+def symmetric (R : relation α) := ∀{a b : α} (h : R a b), R b a
 
 /-
 Theorem le_not_symmetric :
@@ -278,11 +274,11 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem le_not_symmetric : ¬symmetric' le :=
+theorem le_not_symmetric : ¬symmetric le :=
 begin
-  unfold symmetric',
+  unfold symmetric,
   by_contra c,
-  cases c (le_s (le_n 0)),
+  cases c (less_than_or_equal.step (@less_than_or_equal.refl 0)),
 end
 
 /-
@@ -290,8 +286,7 @@ Definition antisymmetric {X: Type} (R: relation X) :=
   ∀a b : X, (R a b) → (R b a) → a = b.
 -/
 
-def antisymmetric {α} (R : relation α) :=
-  ∀ {a b} (hab : R a b) (hba : R b a), a = b
+def anti_symmetric (R : relation α) := ∀{a b} (hab : R a b) (hba : R b a), a = b
 
 /-
 Theorem le_antisymmetric :
@@ -300,16 +295,19 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem le_antisymmetric : antisymmetric le :=
+theorem le_antisymm : anti_symmetric le :=
 begin
-  unfold antisymmetric,
+  unfold anti_symmetric,
   intros,
-  induction a with a' ih generalizing b,
+  induction a with a ih generalizing b,
     cases hba,
     refl,
   cases b,
     cases hab,
-  exact congr_arg _ (ih (le_S_n hab) (le_S_n hba)),
+  apply congr_arg,
+  apply ih,
+    exact nat.le_of_succ_le_succ hab,
+  exact nat.le_of_succ_le_succ hba,
 end
 
 /-
@@ -321,54 +319,23 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-/-
-a lot of false starts
-look at the definition of <
--/
-
-theorem le_step {n m p}
-  (hn : n <' m) (hm : m ≤' succ p) : n ≤' p :=
-  le_S_n $ le_trans'' hn hm
-
--- theorem z_le (n) : 0 ≤' n :=
--- begin
---   induction n with n ih,
---     exact le_n 0,
---   exact le_s ih,
--- end
-
--- theorem le_step {n m p}
---   (hn : n <' m) (hm : m ≤' succ p) : n ≤' p :=
--- begin
---   induction m with m' ih generalizing n p,
---     cases hn,
---   cases n,
---     exact z_le p,
---   cases p,
---     cases hm,
---       cases hn,
---       cases hn_h,
---     cases hm_h,
---   cases hn,
---     exact le_S_n hm,
---   exact ih (hn_h) (le_Sn_le hm),
--- end
+theorem le_step (hn : n < m) (hm : m ≤ p + 1) : n ≤ p :=
+  nat.le_of_succ_le_succ $ le_trans hn hm
 
 /-
 Definition equivalence {X:Type} (R: relation X) :=
   (reflexive R) ∧ (symmetric R) ∧ (transitive R).
 -/
 
-def equivalence' {α} (R : relation α) :=
-  reflexive' R ∧ symmetric' R ∧ transitive' R
+def equivalence (R : relation α) := reflexive R ∧ symmetric R ∧ transitive R
 
 /-
 Definition order {X:Type} (R: relation X) :=
   (reflexive R) ∧ (antisymmetric R) ∧ (transitive R).
 -/
 
-def order {α} (R : relation α) :=
-  reflexive' R ∧ antisymmetric R ∧ transitive' R
+def partial_order (R : relation α) :=
+  reflexive R ∧ anti_symmetric R ∧ transitive R
 
 /-
 Definition preorder {X:Type} (R: relation X) :=
@@ -384,19 +351,16 @@ Proof.
       + (* transitive. *) apply le_trans. Qed.
 -/
 
-def preorder' {α} (R : relation α) :=
-  reflexive' R ∧ transitive' R
+def preorder (R : relation α) := reflexive R ∧ transitive R
 
-/- not sure why exact doesn't work -/
-
-theorem le_order : order le :=
+theorem le_order : partial_order le :=
 begin
-  unfold order,
+  unfold partial_order,
   split,
-    apply le_reflexive,
+    apply le_refl,
   split,
-    apply le_antisymmetric,
-  apply le_trans'',
+    apply le_antisymm,
+  apply le_trans,
 end
 
 /-
@@ -409,7 +373,7 @@ Inductive clos_refl_trans {A: Type} (R: relation A) : relation A :=
           clos_refl_trans R x z.
 -/
 
-inductive clos_refl_trans {α} (R : relation α) : relation α
+inductive clos_refl_trans (R : relation α) : relation α
 | rt_step {x y} (h : R x y) : clos_refl_trans x y
 | rt_refl (x) : clos_refl_trans x x
 | rt_trans {x y z}
@@ -439,28 +403,25 @@ Proof.
       apply IHclos_refl_trans2. Qed.
 -/
 
-open next_nat
-
-theorem next_nat_closure_is_le (n m)
-  : n ≤' m ↔ (clos_refl_trans next_nat) n m :=
+theorem next_nat_closure_is_le : n ≤ m ↔ (clos_refl_trans next_nat) n m :=
 begin
   split,
     intro h,
-    induction h,
-    case le_n { apply rt_refl, },
-    case le_s : n' m' h' ih {
-      exact rt_trans ih (rt_step (nn _)),
-    },
+    induction h with m h ih,
+      apply rt_refl,
+    apply rt_trans,
+    apply ih,
+      apply rt_step,
+    apply nn,
   intro h,
   induction h,
-  case rt_step : n' m' h {
-    cases h,
-    exact le_s (le_n _),
-  },
-  case rt_refl { apply le_n, },
-  case rt_trans : x y z hxy hyz ihx ihy {
-    exact le_trans'' ihx ihy,
-  },
+    case rt_step : x y h {
+      cases h,
+      apply less_than_or_equal.step,
+      exact less_than_or_equal.refl,
+    },
+  case rt_refl : x { exact less_than_or_equal.refl, },
+  case rt_trans : x y z hxy hyz ihx ihy { exact le_trans ihx ihy, },
 end
 
 /-
@@ -473,7 +434,7 @@ Inductive clos_refl_trans_1n {A : Type}
       clos_refl_trans_1n R x z.
 -/
 
-inductive clos_refl_trans_1n {α} (R : relation α) : α → α → Prop
+inductive clos_refl_trans_1n (R : relation α) : α → α → Prop
 | rt1n_refl (x) : clos_refl_trans_1n x x
 | rt1n_trans {x y z} (hxy : R x y) (hyz : clos_refl_trans_1n y z)
   : clos_refl_trans_1n x z
@@ -488,8 +449,8 @@ Proof.
   apply rt1n_trans with y. apply H. apply rt1n_refl. Qed.
 -/
 
-lemma rsc_R {α} {R : relation α} {x y} (h : R x y)
-  : clos_refl_trans_1n R x y := rt1n_trans h (rt1n_refl y)
+lemma rsc_R {R : relation α} {x y} (h : R x y) : clos_refl_trans_1n R x y
+  := rt1n_trans h (rt1n_refl y)
 
 /-
 Lemma rsc_trans :
@@ -501,15 +462,13 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-lemma rsc_trans {α} {R : relation α} {x y z}
+lemma rsc_trans {R : relation α} {x y z}
   (hxy : clos_refl_trans_1n R x y) (hyz : clos_refl_trans_1n R y z)
   : clos_refl_trans_1n R x z :=
 begin
   induction hxy,
   case rt1n_refl { exact hyz, },
-  case rt1n_trans : x' y' z' hxy' hyz' ih {
-    exact rt1n_trans hxy' (ih hyz),
-  },
+  case rt1n_trans : x' y' z' hxy' hyz' ih { exact rt1n_trans hxy' (ih hyz), },
 end
 
 /-
@@ -520,7 +479,7 @@ Proof.
   (* FILL IN HERE *) Admitted.
 -/
 
-theorem rtc_rsc_coincide {α} (R : relation α) (x y)
+theorem rtc_rsc_coincide {R : relation α} {x y}
   : clos_refl_trans R x y ↔ clos_refl_trans_1n R x y :=
 begin
   split,
@@ -528,13 +487,11 @@ begin
     induction h,
     case rt_step : x' y' h' { exact rsc_R h', },
     case rt_refl { exact rt1n_refl h, },
-    case rt_trans : x' y' z' hxy hyz ihy ihz {
-      exact rsc_trans ihy ihz,
-    },
+    case rt_trans : x' y' z' hxy hyz ihy ihz { exact rsc_trans ihy ihz, },
   intro h,
   induction h,
   case rt1n_refl { exact rt_refl h },
-  case rt1n_trans : x' y' z' hxy hyz ih {
-    exact rt_trans (rt_step hxy) ih,
-  },
+  case rt1n_trans : x' y' z' hxy hyz ih { exact rt_trans (rt_step hxy) ih, },
 end
+
+end rel
