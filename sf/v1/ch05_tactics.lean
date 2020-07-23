@@ -3,21 +3,24 @@ import .ch02_induction
 import .ch03_lists
 import .ch04_poly
 
-open basics (evenb oddb sub_two eqb)
-open induction (double)
-open lists (eqb_id)
-open poly (split combine)
-open poly.list (length filter)
 open nat (
   succ add_one add_succ succ_add le_of_succ_le_succ succ_le_succ
   decidable_le
 )
 
-namespace tactics
+open basics (evenb oddb sub_two eqb)
+open induction (double)
+open lists (eqb_id)
+open poly (split combine)
+open poly.list (length filter)
+
+local infix ` =? `:50 := eqb
 
 variables {α β γ : Type}
 variables (b : bool)
 variables (n m o p : ℕ)
+
+namespace tactics
 
 /-
 Theorem silly1 : ∀(n m o p : nat),
@@ -848,7 +851,7 @@ changes is show for hypotheses
 -/
 lemma split_injective
   {h : α × β} {t h₁ t₁ h₂ t₂}
-  (eq : split (h::t) = {h₁::t₁, h₂::t₂}) :
+  (eq : split (h :: t) = {h₁::t₁, h₂::t₂}) :
   {h₁, h₂} = h ∧ split t = {t₁, t₂} :=
 begin
   rw split at eq,
@@ -868,11 +871,11 @@ theorem combine_split :
   ∀{l : poly.list (α × β)} {l₁ l₂} (hs : split l = {l₁, l₂}),
   combine l₁ l₂ = l
 | [] [] [] hs := rfl
-| (h::t) [] _ hs := by cases hs
-| (h::t) _ [] hs := by cases hs
+| (h :: t) [] _ hs := by cases hs
+| (h :: t) _ [] hs := by cases hs
 | [] (h₁::t₁) _ hs := by cases hs
 | [] _ (h₂::t₂) hs := by cases hs
-| (h::t) (h₁::t₁) (h₂::t₂) hs :=
+| (h :: t) (h₁::t₁) (h₂::t₂) hs :=
 begin
   have, exact split_injective hs,
   rw combine,
@@ -1055,8 +1058,8 @@ lemma combine_len  :
   ∀(l₁ : poly.list α) (l₂ : poly.list β),
   (combine l₁ l₂).length = min l₁.length l₂.length
 | [] [] := rfl
-| (h::t) [] := rfl
-| [] (h::t) := rfl
+| (h :: t) [] := rfl
+| [] (h :: t) := rfl
 | (h₁::t₁) (h₂::t₂) :=
 begin
   unfold combine length,
@@ -1071,8 +1074,8 @@ theorem split_combine :
   (hl : l₁.length = l₂.length),
   split l = {l₁, l₂}
 | [] [] [] hc hl := rfl
-| (h::t) [] l₂ hc hl := by cases hc
-| (h::t) (h₁::t₁) [] hc hl := by cases hc
+| (h :: t) [] l₂ hc hl := by cases hc
+| (h :: t) (h₁::t₁) [] hc hl := by cases hc
 | [] (h₁::t₁) l₂ hc hl :=
 begin
   replace hc, exact congr_arg length hc,
@@ -1093,7 +1096,7 @@ begin
   rw hc' at hc,
   cases hc,
 end
-| (h::t) (h₁::t₁) (h₂::t₂) hc hl :=
+| (h :: t) (h₁::t₁) (h₂::t₂) hc hl :=
 begin
   injection hl with hl,
   simp only [combine] at hc,
@@ -1123,7 +1126,7 @@ begin
   intros,
   cases eq,
 end
-| (h::t) :=
+| (h :: t) :=
 begin
   intros,
   rw filter at eq,
@@ -1177,7 +1180,7 @@ Proof. (* FILL IN HERE *) Admitted.
 
 def all : list α → (α → bool) → bool
 | [] p := tt
-| (h::t) p := if p h then all t p else ff
+| (h :: t) p := if p h then all t p else ff
 
 example : all [1, 3, 5, 7, 9] oddb := rfl
 
@@ -1189,7 +1192,7 @@ example : all [] (eqb 5) := rfl
 
 def any : list α → (α → bool) → bool
 | [] p := ff
-| (h::t) p := if p h then tt else any t p
+| (h :: t) p := if p h then tt else any t p
 
 example : any [0, 2, 4, 6] (eqb 5) = ff := rfl
 

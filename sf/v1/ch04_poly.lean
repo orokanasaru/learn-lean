@@ -1,8 +1,11 @@
 import data.nat.basic
 import .ch01_basics
 
-open basics (evenb oddb sub_two leb)
 open nat (add mul)
+
+open basics (evenb oddb sub_two leb eqb)
+
+local infix ` =? `:50 := eqb
 
 namespace poly
 
@@ -335,7 +338,7 @@ end
 
 theorem length_nil : (@nil α).length = 0 := rfl
 
-theorem length_cons (a : α) (l) : (a::l).length = l.length + 1 := rfl
+theorem length_cons (a : α) (l) : (a :: l).length = l.length + 1 := rfl
 
 lemma length_append (l₁ l₂ : list α) :
   (l₁ ++ l₂).length = l₁.length + l₂.length :=
@@ -510,8 +513,8 @@ Example test_nth_error3 : nth_error [true] 2 = None.
 
 def nth_error : list α → ℕ → option α
 | [] _ := none
-| (h::_) 0 := some h
-| (_::t) (n + 1) := nth_error t n
+| (h :: _) 0 := some h
+| (_ :: t) (n + 1) := nth_error t n
 
 example : nth_error [4,5,6,7] 0 = some 4 := rfl
 
@@ -526,7 +529,7 @@ Definition hd_error {X : Type} (l : list X) : option X
 
 def hd_error : list α → option α
 | [] := none
-| (h::_) := some h
+| (h :: _) := some h
 
 /-
 Check @hd_error.
@@ -582,7 +585,7 @@ Fixpoint filter {X:Type} (test: X→bool) (l:list X)
 def list.filter {α : Type} (test : α → bool)
   : list α → list α
 | [] := []
-| (h::t) := if test h then h::t.filter else t.filter
+| (h :: t) := if test h then h :: t.filter else t.filter
 
 /-
 Example test_filter1: filter evenb [1;2;3;4] = [2;4].
@@ -689,9 +692,9 @@ Example test_partition2: partition (fun x ⇒ false) [5;9;0] = ([], [5;9;0]).
 
 def list.partition (test : α → bool) : list α → list α × list α
 | [] := {[], []}
-| (h::t) := if test h
-            then {h::t.partition.fst, t.partition.snd}
-            else {t.partition.fst, h::t.partition.snd}
+| (h :: t) := if test h
+            then {h :: t.partition.fst, t.partition.snd}
+            else {t.partition.fst, h :: t.partition.snd}
 
 example :
   [1,2,3,4,5].partition oddb = {[1, 3, 5], [2, 4]} := rfl
@@ -709,7 +712,7 @@ Fixpoint map {X Y: Type} (f:X→Y) (l:list X) : (list Y) :=
 
 def list.map (f : α → β) : list α → list β
 | [] := []
-| (h::t) := f h :: t.map
+| (h :: t) := f h :: t.map
 
 /-
 Example test_map1: map (fun x ⇒ plus 3 x) [2;0;2] = [5;3;5].
@@ -782,7 +785,7 @@ Example test_flat_map1:
 /- i don't love the order that lean uses -/
 def list.bind : list α → (α → list β) → list β
 | [] f := []
-| (h::t) f := f h ++ t.bind f
+| (h :: t) f := f h ++ t.bind f
 
 example : [1, 5, 4].bind (λn, [n, n, n])
   = [1, 1, 1, 5, 5, 5, 4, 4, 4] := rfl
@@ -811,11 +814,11 @@ Fixpoint fold {X Y: Type} (f: X→Y→Y) (l: list X) (b: Y)
 
 def list.foldr (f: α → β → β) (b : β) : list α → β
 | [] := b
-| (a::t) := f a t.foldr
+| (a :: t) := f a t.foldr
 
 def list.foldl (f: α → β → α) : α → list β → α
 | a [] := a
-| a (b::t) := t.foldl (f a b)
+| a (b :: t) := t.foldl (f a b)
 
 /-
 Check (fold andb).

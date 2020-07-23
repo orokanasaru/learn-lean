@@ -134,7 +134,7 @@ do ctx ← local_context,
 
 meta def first {α : Type} : list (tactic α) → tactic α
 | []      := fail "first tactic failed, no more alternatives"
-| (t::ts) := t <|> first ts
+| (t :: ts) := t <|> first ts
 
 end hidden
 

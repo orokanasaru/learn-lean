@@ -1,21 +1,23 @@
 import tactic.basic
 import .ch05_tactics
 
+open list (map cons_append nil_append)
+open nat (pred succ eq_zero_of_mul_eq_zero)
+
 open basics (oddb evenb eqb)
 open induction (double evenb_succ)
 open lists (eqb_refl)
 open tactics (eqb_true)
 
-open list (map cons_append nil_append)
-open nat (pred succ eq_zero_of_mul_eq_zero)
-
-namespace logic
+local infix ` =? `:50 := eqb
 
 variables {α β γ : Type}
 variable {a : α}
 variables {P Q R : Prop}
 variables {m n o p : ℕ}
 variables {l l' : list α}
+
+namespace logic
 
 /-
 Check 3 = 3.
@@ -781,7 +783,7 @@ Fixpoint In {A : Type} (x : A) (l : list A) : Prop :=
 
 def In (a : α) : list α → Prop
 | [] := false
-| (h::t) := h = a ∨ In t
+| (h :: t) := h = a ∨ In t
 
 /-
 Example In_example_1 : In 4 [1; 2; 3; 4; 5].
@@ -937,7 +939,7 @@ Proof.
 
 def all (p : α → Prop) : list α → Prop
 | [] := true
-| (h::t) := p h ∧ all t
+| (h :: t) := p h ∧ all t
 
 lemma all_in (p : α → Prop) : (∀{a}, In a l → p a) ↔ all p l :=
 begin
@@ -1302,7 +1304,7 @@ local infix ++ := append
 
 def rev_append : poly.list α → poly.list α → poly.list α
 | [] l₂ := l₂
-| (h::t) l₂ := rev_append t (h::l₂)
+| (h :: t) l₂ := rev_append t (h::l₂)
 
 def tr_rev (l: poly.list α) := rev_append l []
 

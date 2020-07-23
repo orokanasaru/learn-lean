@@ -154,7 +154,8 @@ do
   tactic.repeat (tactic.applyc ``and.intro),
   tactic.any_goals (tactic.solve1 (tactic.repeat
     (tactic.applyc ``even.add_two
-     <|> tactic.applyc ``even.zero)))
+     <|> tactic.applyc ``even.zero))),
+  tactic.skip
 
 /-! The `meta` keyword makes it possible for the function to call other
 metafunctions. The `do` keyword enters a monad, and the `<|>` operator is the
@@ -472,7 +473,8 @@ do
   tactic.applyc nam
     ({ md := tactic.transparency.reducible, unify := ff }
      : tactic.apply_cfg),
-  tactic.all_goals tactic.assumption
+  tactic.all_goals tactic.assumption,
+  tactic.skip
 
 meta def prove_direct : tactic unit :=
 do

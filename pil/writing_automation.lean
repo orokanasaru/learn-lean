@@ -45,10 +45,11 @@ do hyps ← local_context,
          ``not_true_iff, ``not_false_iff],
    hyps.mmap' (normalize_hyp lemmas)
 
-example (p q r : Prop) (h₁ : ¬ (p ↔ (q ∧ ¬ r))) (h₂ : ¬ (p → (q → ¬ r))) : true :=
-by do normalize_hyps,
-      trace_state,
-      triv
+example (p q r : Prop) (h₁ : ¬ (p ↔ (q ∧ ¬ r))) (h₂ : ¬ (p → (q → ¬ r)))
+  : true := by do
+    normalize_hyps,
+    trace_state,
+    triv
 
 meta def add_fact (prf : expr) : tactic unit :=
 do nh ← get_unused_name `h none,

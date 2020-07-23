@@ -9,16 +9,19 @@ open list (
   append_assoc length_append ne_nil_of_length_pos
 )
 
-open basics (leb)
+open basics (leb eqb)
 open induction (double double_add)
 open logic (In in_app_iff eqb_eq eqb_neq)
 
-namespace indprop
+local infix ` =? `:50 := eqb
+local infix ` ≤? `:50 := leb
 
 variables {α β γ : Type}
 variables {P Q : Prop}
 variables {a : α}
 variables {n m o p : ℕ}
+
+namespace indprop
 
 /-
 Inductive even : nat → Prop :=
@@ -785,8 +788,8 @@ starting generic since it's useful later
 
 inductive subseq : list α → list α → Prop
 | em : subseq [] []
-| cr {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq l₁ (a::l₂)
-| cl {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq (a::l₁) (a::l₂)
+| cr {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq l₁ (a :: l₂)
+| cl {l₁ l₂} (a) (h : subseq l₁ l₂) : subseq (a :: l₁) (a :: l₂)
 
 open subseq
 
@@ -923,7 +926,7 @@ variables {re re₀ re₁ re₂ : @reg_exp α}
 Notation "s =~ re" := (exp_match s re) (at level 80).
 -/
 
-infix ` =~ `:35 := exp_match
+local infix ` =~ `:35 := exp_match
 
 /-
 Example reg_exp_ex1 : [1] =~ Char 1.
@@ -958,7 +961,7 @@ before needing generalize
 example : ¬([1, 2] =~ Char 1) :=
 begin
   generalize heq : [1, 2] = s,
-  with_cases { rintro ⟨_⟩ },
+  with_cases { rintro ⟨⟩ },
   rintro ⟨⟩,
 end
 
@@ -983,7 +986,7 @@ Qed.
 
 def reg_exp_of_list : list α → @reg_exp α
 | [] := EmptyStr
-| (a::l) := App (Char a) (reg_exp_of_list l)
+| (a :: l) := App (Char a) (reg_exp_of_list l)
 
 example : [1, 2, 3] =~ reg_exp_of_list [1, 2, 3] :=
 begin
@@ -1599,6 +1602,10 @@ Inductive reflect (P : Prop) : bool → Prop :=
 | ReflectF (H : ¬P) : reflect P false.
 -/
 
+/-
+TODO: replace with decidable
+-/
+
 inductive reflect (P : Prop) : bool → Prop
 | ReflectT (h : P) : reflect tt
 | ReflectF (h : ¬P) : reflect ff
@@ -1707,7 +1714,7 @@ Proof.
 
 def count (n) : list ℕ → ℕ
 | [] := 0
-| (m::l) := (if n =? m then 1 else 0) + count l
+| (m :: l) := (if n =? m then 1 else 0) + count l
 
 /-
 TODO: introduced revert_after for hypothesis management to make
@@ -1750,8 +1757,8 @@ Inductive nostutter {X:Type} : list X → Prop :=
 inductive nostutter : list α → Prop
 | no₀ : nostutter []
 | no₁ (a) : nostutter [a]
-| no₂ (a) {h t} (n : nostutter (h::t)) (hne : a ≠ h)
-  : nostutter (a::h::t)
+| no₂ (a) {h t} (n : nostutter (h :: t)) (hne : a ≠ h)
+  : nostutter (a :: h::t)
 
 open nostutter
 
@@ -1805,8 +1812,8 @@ end
 
 inductive merge : list α → list α → list α → Prop
 | m₀ : merge [] [] []
-| ml (h) {t r m} (hm : merge t r m) : merge (h::t) r (h::m)
-| mr {l} (h) {t m} (hm : merge l t m) : merge l (h::t) (h::m)
+| ml (h) {t r m} (hm : merge t r m) : merge (h :: t) r (h :: m)
+| mr {l} (h) {t m} (hm : merge l t m) : merge l (h :: t) (h :: m)
 
 open merge
 
@@ -1909,7 +1916,7 @@ variable {l : poly.list α}
 inductive pal : poly.list α → Prop
 | pal₀ : pal []
 | pal₁ (a) : pal [a]
-| pal₂ (a) {l} (h : pal l) : pal (a::l ++ [a])
+| pal₂ (a) {l} (h : pal l) : pal (a :: l ++ [a])
 
 open pal
 
@@ -1955,7 +1962,7 @@ begin
   exact step ih,
 end
 
-lemma one_le_cons_length (a : α) (l : poly.list α) : 1 ≤ (a::l).length :=
+lemma one_le_cons_length (a : α) (l : poly.list α) : 1 ≤ (a :: l).length :=
 by apply nat.le_add_left
 
 lemma has_snoc {l : poly.list α} (h : 1 ≤ l.length) : ∃ll ar, l = ll ++ [ar] :=
@@ -1966,7 +1973,7 @@ begin
     use [[], a],
     rw poly.nil_append,
   rcases ih (one_le_cons_length a' l) with ⟨ll, ar, ih⟩,
-  use [a::ll, ar],
+  use [a :: ll, ar],
   rw ih,
   rw poly.cons_append,
 end
@@ -2014,7 +2021,8 @@ begin
 end
 
 lemma rev_cons_snoc {al ar : α} {lm : poly.list α}
-  (h : al::lm ++ [ar] = (al::lm ++ [ar]).reverse) : al = ar ∧ lm = lm.reverse :=
+  (h : al :: lm ++ [ar] = (al :: lm ++ [ar]).reverse)
+  : al = ar ∧ lm = lm.reverse :=
 begin
   rw poly.cons_append at h,
   unfold reverse at h,
@@ -2053,14 +2061,14 @@ end palindrome
 
 inductive disjoint : list α → list α → Prop
 | dis₀ : disjoint [] []
-| disl (h) {t r} (d : disjoint t r) (hn : ¬In h r) : disjoint (h::t) r
-| disr (h) {l t} (d : disjoint l t) (hn : ¬In h l) : disjoint l (h::t)
+| disl (h) {t r} (d : disjoint t r) (hn : ¬In h r) : disjoint (h :: t) r
+| disr (h) {l t} (d : disjoint l t) (hn : ¬In h l) : disjoint l (h :: t)
 
 open indprop.disjoint
 
 inductive nodup : list α → Prop
 | nodup₀ : nodup []
-| nodup₁ (h) {l} (n : nodup l) (hn : ¬In h l) : nodup (h::l)
+| nodup₁ (h) {l} (n : nodup l) (hn : ¬In h l) : nodup (h :: l)
 
 open nodup
 
@@ -2173,7 +2181,7 @@ begin
   exact this.right,
 end
 
-lemma nodup_cons {l} (hn : nodup (a::l)) : nodup l :=
+lemma nodup_cons {l} (hn : nodup (a :: l)) : nodup l :=
 begin
   cases hn with _ _ n hn,
   exact n,
@@ -2256,8 +2264,8 @@ Inductive repeats {X:Type} : list X → Prop :=
 -/
 
 inductive repeats : list α → Prop
-| r₀ {a} {l} (hin : In a l) : repeats (a::l)
-| r₁ (a) {l} (r : repeats l) : repeats (a::l)
+| r₀ {a} {l} (hin : In a l) : repeats (a :: l)
+| r₁ (a) {l} (r : repeats l) : repeats (a :: l)
 
 open repeats
 
@@ -2411,10 +2419,10 @@ Proof.
 Qed.
 -/
 
-lemma empty_nomatch_ne : a::s =~ EmptyStr ↔ false :=
+lemma empty_nomatch_ne : a :: s =~ EmptyStr ↔ false :=
 begin
   apply iff_false_intro,
-  generalize heq : a::s = re,
+  generalize heq : a :: s = re,
   by_contra c,
   cases c,
   cases heq,
@@ -2434,10 +2442,10 @@ Proof.
 Qed.
 -/
 
-lemma char_nomatch_char {b} (hne : b ≠ a) : b::s =~ Char a ↔ false :=
+lemma char_nomatch_char {b} (hne : b ≠ a) : b :: s =~ Char a ↔ false :=
 begin
   apply iff_false_intro,
-  generalize heq : b::s = re,
+  generalize heq : b :: s = re,
   by_contra c,
   apply hne,
   cases c,
@@ -2454,10 +2462,10 @@ Proof.
 Qed.
 -/
 
-lemma char_eps_suffix : a::s =~ Char a ↔ s = [] :=
+lemma char_eps_suffix : a :: s =~ Char a ↔ s = [] :=
 begin
   split,
-    generalize heq : a::s = re,
+    generalize heq : a :: s = re,
     intro h,
     cases h,
     cases heq,
@@ -2503,9 +2511,9 @@ Proof.
 -/
 
 lemma app_ne
-  : a::s =~ App re₀ re₁ ↔
-    [] =~ re₀ ∧ a::s =~ re₁ ∨
-    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a::s₀ =~ re₀ ∧ s₁ =~ re₁ :=
+  : a :: s =~ App re₀ re₁ ↔
+    [] =~ re₀ ∧ a :: s =~ re₁ ∨
+    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a :: s₀ =~ re₀ ∧ s₁ =~ re₁ :=
 begin
   split,
     intro h,
@@ -2520,8 +2528,8 @@ begin
     exact or.inr ⟨t₀, w₁, hlr, hrl, hrr⟩,
   rw app_exists,
   rintro (⟨hl, hr⟩ | ⟨w₀, w₁, rfl, hl, hr⟩),
-    exact ⟨[], a::s, rfl, hl, hr⟩,
-  use [a::w₀, w₁, rfl, hl, hr],
+    exact ⟨[], a :: s, rfl, hl, hr⟩,
+  use [a :: w₀, w₁, rfl, hl, hr],
 end
 
 /-
@@ -2565,11 +2573,11 @@ all_goals { try { contradiction } } here
 -/
 
 lemma star_ne
-  : a::s =~ Star re ↔
-    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a::s₀ =~ re ∧ s₁ =~ Star re :=
+  : a :: s =~ Star re ↔
+    ∃s₀ s₁, s = s₀ ++ s₁ ∧ a :: s₀ =~ re ∧ s₁ =~ Star re :=
 begin
   split,
-    generalize heq : a::s = s',
+    generalize heq : a :: s = s',
     generalize heq' : Star re = re',
     intro h,
     induction h,
@@ -2741,7 +2749,7 @@ Definition is_der re (a : ascii) re' :=
   ∀s, a :: s =~ re ↔ s =~ re'.
 -/
 
-def is_der (a : α) (re₀ re₁) := ∀s, a::s =~ re₀ ↔ s =~ re₁
+def is_der (a : α) (re₀ re₁) := ∀s, a :: s =~ re₀ ↔ s =~ re₁
 
 /-
 Definition derives d := ∀a re, is_der re a (d a re).
@@ -2856,7 +2864,7 @@ begin
   unfold is_der,
   intros,
   split,
-    generalize heq : a::s = s',
+    generalize heq : a :: s = s',
     intro h,
     induction re generalizing s s',
     case EmptySet { cases h, },
@@ -2884,7 +2892,7 @@ begin
         case ReflectT : this {
           simp only [if_true, bool.coe_sort_tt],
           apply MUnionR,
-          exact ih₂ s (a::s) rfl h₂,
+          exact ih₂ s (a :: s) rfl h₂,
         },
         case ReflectF : this {
           rw ←heq' at this,
@@ -2896,13 +2904,13 @@ begin
         apply MUnionL,
         rw app_exists,
         refine ⟨s₀, s₁, rfl, _, h₂⟩,
-        exact ih₁ s₀ (a::s₀) rfl h₁,
+        exact ih₁ s₀ (a :: s₀) rfl h₁,
       },
       case ReflectF : this {
         simp only [bool.coe_sort_ff, if_false],
         rw app_exists,
         refine ⟨s₀, s₁, rfl, _, h₂⟩,
-        exact ih₁ s₀ (a::s₀) rfl h₁,
+        exact ih₁ s₀ (a :: s₀) rfl h₁,
       },
     },
     case Union : re₁ re₂ ih₁ ih₂ {
@@ -2919,7 +2927,7 @@ begin
       rcases h with ⟨s₀, s₁, rfl, h₁, h₂⟩,
       rw app_exists,
       refine ⟨s₀, s₁, rfl, _, h₂⟩,
-      exact ih s₀ (a::s₀) rfl h₁,
+      exact ih s₀ (a :: s₀) rfl h₁,
     },
   intro h,
   induction re generalizing s,
@@ -2985,7 +2993,7 @@ Fixpoint regex_match (s : string) (re : @reg_exp ascii) : bool
 
 def regex_match : str → @reg_exp char → bool
 | [] r := match_eps r
-| (c::s) r := regex_match s (derive c r)
+| (c :: s) r := regex_match s (derive c r)
 
 /-
 Theorem regex_refl : matches_regex regex_match.

@@ -428,8 +428,7 @@ However, this does not work because subtraction on `ℕ` is ill-behaved (e.g.,
       { intros pn₁ pn₂ h,
         rewrite h },
       { intros pn₁ pn₂ pn₃ h₁₂ h₂₃,
-        apply @eq_of_add_eq_add_right _ _ _ (prod.snd pn₂),
-        cc }
+        linarith, }
     end }
 
 #print equivalence
@@ -541,7 +540,7 @@ begin
   unfold upair.mk,
   apply quotient.sound,
   rewrite upair.rel_iff,
-  apply set.insert_comm
+  apply set.union_comm
 end
 
 /-! Another representation of unordered pairs is as sets of cardinality 1 or 2.

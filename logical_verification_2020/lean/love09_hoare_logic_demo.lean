@@ -360,7 +360,12 @@ partial_hoare.while_intro' (λs, s "n" + s "m" = n₀ + m₀)
       simp,
       intros s hnm hnz,
       rewrite ←hnm,
-      cases s "n"; finish }
+      cases s "n",
+        finish,
+      rw add_comm _ 1,
+      rw ←add_assoc,
+      finish,
+    }
   end
   (by simp { contextual := true })
   (by simp { contextual := true })
@@ -456,7 +461,11 @@ show {* λs, s "n" = n₀ ∧ s "m" = m₀ *}
     vcg; simp { contextual := tt },
     intros s hnm hnz,
     rewrite ←hnm,
-    cases s "n"; finish
+    cases s "n",
+      finish,
+    rw add_comm _ 1,
+    rw ←add_assoc,
+    finish,
   end
 
 

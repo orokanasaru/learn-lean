@@ -6,8 +6,9 @@ import data.nat.basic
 import tactic.basic
 import .ch01_basics
 
-open basics (evenb)
 open nat (succ)
+
+open basics (evenb)
 
 namespace induction
 

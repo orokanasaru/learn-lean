@@ -399,6 +399,9 @@ Fixpoint plus (n : nat) (m : nat) : nat :=
   end.
 -/
 
+/-
+TODO: lean recurses on the right argument
+-/
 def add : ℕ → ℕ → ℕ
 | 0 m := m
 | (n + 1) m := (add n m) + 1
@@ -419,7 +422,10 @@ Example test_mult1: (mult 3 3) = 9.
 Proof. simpl. reflexivity. Qed.
 -/
 
-/- match doesn't work with recursion -/
+/-
+TODO: lean recurses on the right argument
+match doesn't work with recursion
+-/
 def mul : ℕ → ℕ → ℕ
 | 0 m := 0
 | (n + 1) m := add m (mul n m)
@@ -551,8 +557,8 @@ Example test_leb3': (4 <=? 2) = false.
 Proof. simpl. reflexivity. Qed.
 -/
 
-infix ` =? `:50 := eqb
-infix ` ≤? `:50 := leb
+local infix ` =? `:50 := eqb
+local infix ` ≤? `:50 := leb
 
 example : (4 ≤? 2) = ff := rfl
 
@@ -577,7 +583,7 @@ def ltb : ℕ → ℕ → bool
 | 0 (succ m) := tt
 | (succ n) (succ m) := ltb n m
 
-infix ` <? `:50 := ltb
+local infix ` <? `:50 := ltb
 
 example : ltb 2 2 = ff := rfl
 example : ltb 2 4 = tt := rfl

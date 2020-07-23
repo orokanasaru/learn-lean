@@ -30,31 +30,31 @@ variable {α : Type}
 /- this and the next makes simp way more powerful -/
 local attribute [simp]
 def len : list α → ℕ
-| (x::xs) := 1 + len xs
+| (x :: xs) := 1 + len xs
 | _ := 0
 
 local attribute [simp]
 def rev : list α → list α
-| (x::xs) := rev xs ++ [x]
+| (x :: xs) := rev xs ++ [x]
 | _ := []
 
 @[simp]
 def rev' : list α → list α → list α
 | [] r := r
-| (x::xs) r := rev' xs (x::r)
+| (x :: xs) r := rev' xs (x :: r)
 
 @[simp]
 def rev_tl (as : list α) : list α := rev' as []
 
 -- @[simp]
 -- lemma rev'_cons (a : α) (as : list α) (xs: list α):
---   rev' (a :: as) xs = rev' as (a::xs) := by induction as; simp
+--   rev' (a :: as) xs = rev' as (a :: xs) := by induction as; simp
 
 lemma rev'_app : ∀ as rs xs : list α,
   rev' as rs ++ xs = rev' as (rs ++ xs)
 | [] _ _ := by simp
 | _ _ [] := by simp
-| (a::as) rs (x::xs) := by simp *
+| (a :: as) rs (x :: xs) := by simp *
 
 lemma rev_rev' (as : list α) : rev as = rev' as [] :=
 begin
@@ -74,14 +74,14 @@ by induction as; simp [rev_rev']
 
 local attribute [simp]
 theorem len_cons (x : α) (xs : list α) :
-  len (x::xs) = 1 + len xs := by simp
+  len (x :: xs) = 1 + len xs := by simp
 
 local attribute [simp]
 theorem len_app (s : list α) (t : list α) :
   len (s ++ t) = len s + len t := by induction s; simp [*, add_assoc]
 
 theorem len_rev : ∀ as : list α, len (rev as) = len as
-| (a::as) := by simp [*, add_comm]
+| (a :: as) := by simp [*, add_comm]
 | [] := rfl
 
 theorem len_rev' (as : list α) : len (rev as) = len as :=

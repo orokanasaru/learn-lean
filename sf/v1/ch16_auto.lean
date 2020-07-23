@@ -52,9 +52,9 @@ Proof.
 -- meta def names : list expr → tactic (list name) :=
 -- λes, match es with
 -- | [] := do pure []
--- | e::es := do
+-- | e :: es := do
 --   es' ← names es,
---   pure $ e.local_pp_name::es'
+--   pure $ e.local_pp_name :: es'
 -- end
 
 -- meta def inv (h : name) (ns : list name := []): tactic unit := do
@@ -502,7 +502,7 @@ namespace tactic.interactive
 
 -- meta def eq_bool (b : bool): list expr → tactic (option expr)
 -- | [] := none
--- | (e::es) := do
+-- | (e :: es) := do
 --   e' ← infer_type e,
 --   match e' with
 --   | `(_ = %%b') := if (reflect b).to_expr = b'
@@ -592,7 +592,7 @@ meta def find_pi : (list (expr × expr)) → tactic (list (expr × expr)) := λe
   | (n, (pi _ _ _ (pi _ _ (app e₁ e₂) `(%%l = %%r))))::es := do
     es ← find_pi es,
     pure $ (n, e₁)::es
-  | (_::es) := find_pi es
+  | (_ :: es) := find_pi es
   | _ := pure $ []
   end
 
@@ -602,7 +602,7 @@ meta def find_app (e: expr) : (list (expr × expr)) → tactic (list (expr × ex
   | (n, (app e₁ e₂))::es := do
     es ← find_app es,
     pure $ if e = e₁ then (n, e₂)::es else es
-  | (_::es) := find_app es
+  | (_ :: es) := find_app es
   | _ := pure $ []
   end
 

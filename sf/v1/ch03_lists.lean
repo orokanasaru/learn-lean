@@ -2,8 +2,12 @@ import data.nat.basic
 import tactic.basic
 import .ch01_basics
 
-open basics (oddb eqb leb)
 open nat (pred zero succ)
+
+open basics (oddb eqb leb)
+
+local infix ` =? `:50 := eqb
+local infix ` ≤? `:50 := leb
 
 namespace lists
 
@@ -285,7 +289,7 @@ Fixpoint app (l1 l2 : natlist) : natlist :=
 
 def append : natlist → natlist → natlist
 | nil l2 := l2
-| (h::t) l2 := h :: append t l2
+| (h :: t) l2 := h :: append t l2
 
 /-
 Notation "x ++ y" := (app x y)
@@ -301,7 +305,7 @@ Example test_app3: [1;2;3] ++ nil = [1;2;3].
 Proof. reflexivity. Qed.
 -/
 
-infix ++ := append
+local infix ++ := append
 
 example : [1, 2, 3] ++ [4, 5] = [1, 2, 3, 4, 5] := rfl
 example : nil ++ [4, 5] = [4, 5] := rfl
@@ -332,11 +336,11 @@ Proof. reflexivity. Qed.
 
 def head (default : ℕ) : natlist → ℕ
 | nil := default
-| (h::_) := h
+| (h :: _) := h
 
 def tail : natlist → natlist
 | nil := nil
-| (_::t) := t
+| (_ :: t) := t
 
 example : head 0 [1, 2, 3] = 1 := rfl
 example : head 0 [] = 0 := rfl
@@ -375,13 +379,13 @@ Example test_countoddmembers3:
 
 def nonzeros : natlist → natlist
 | ((n + 1)::t) := (n + 1)::nonzeros t
-| (_::t) := nonzeros t
+| (_ :: t) := nonzeros t
 | _ := nil
 
 example : nonzeros [0, 1, 0, 2, 3, 0, 0] = [1, 2, 3] := rfl
 
 def filter (p : ℕ → bool) : natlist → natlist
-| (h::t) := if p h then h::filter t else filter t
+| (h :: t) := if p h then h::filter t else filter t
 | _ := nil
 
 def oddmembers := filter oddb
@@ -494,7 +498,7 @@ example : count 1 (add 1 [1, 4, 1]) = 3 := rfl
 example : count 5 (add 1 [1, 4, 1]) = 0 := rfl
 
 def member (v : ℕ) : bag → bool
-| (h::t) := if eqb v h then tt else member t
+| (h :: t) := if eqb v h then tt else member t
 | _ := ff
 
 example : member 1 [1, 4, 1] = tt := rfl
@@ -547,7 +551,7 @@ Example test_subset2: subset [1;2;2] [2;1;4;1] = false.
 -/
 
 def remove_one (v : ℕ) : bag → bag
-| (h::t) := if eqb v h then t else h::remove_one t
+| (h :: t) := if eqb v h then t else h::remove_one t
 | _ := nil
 
 example : count 5 (remove_one 5 [2, 1, 5, 4, 1]) = 0 := rfl
@@ -559,7 +563,7 @@ example : count 4 (remove_one 5 [2, 1, 4, 5, 1, 4]) = 2 := rfl
 example : count 5 (remove_one 5 [2, 1, 5, 4, 5, 1, 4]) = 1 := rfl
 
 def remove_all (v : ℕ) : bag → bag
-| (h::t) := if eqb v h then remove_all t else h::remove_all t
+| (h :: t) := if eqb v h then remove_all t else h::remove_all t
 | _ := nil
 
 example : count 5 (remove_all 5 [2, 1, 5, 4, 1]) = 0 := rfl
@@ -572,7 +576,7 @@ example : count 5 (remove_all 5 [2, 1, 5, 4, 5, 1, 4, 5, 1, 4]) = 0 := rfl
 
 /- this is about the dumbest way i can think of -/
 def subset : bag → bag → bool
-| (h::t) b := if leb (count h (h::t)) (count h b)
+| (h :: t) b := if leb (count h (h :: t)) (count h b)
               then subset t b
               else ff
 | _ _ := tt
@@ -648,7 +652,7 @@ Proof. reflexivity. Qed.
 -/
 
 def reverse : natlist → natlist
-| (h::t) := reverse t ++ [h]
+| (h :: t) := reverse t ++ [h]
 | _ := []
 
 example : reverse [1, 2, 3] = [3, 2, 1] := rfl
@@ -702,7 +706,7 @@ Proof.
 
 theorem length_nil : length nil = 0 := rfl
 
-theorem length_cons (n : ℕ) (l : natlist) : length (n::l) = length l + 1
+theorem length_cons (n : ℕ) (l : natlist) : length (n :: l) = length l + 1
   := rfl
 
 theorem length_append (l₁ l₂ : natlist)
@@ -1107,8 +1111,8 @@ Fixpoint nth_bad (l:natlist) (n:nat) : nat :=
 
 def nth_bad : natlist → ℕ → ℕ
 | nil _ := 42
-| (h::_) 0 := h
-| (_::t) (n + 1) := nth_bad t n
+| (h :: _) 0 := h
+| (_ :: t) (n + 1) := nth_bad t n
 
 /-
 Inductive natoption : Type :=
@@ -1142,8 +1146,8 @@ Example test_nth_error3 : nth_error [4;5;6;7] 9 = None.
 @[simp]
 def nth_error : natlist → ℕ → natoption
 | nil _ := none
-| (h::_) 0 := some h
-| (_::t) (n + 1) := nth_error t n
+| (h :: _) 0 := some h
+| (_ :: t) (n + 1) := nth_error t n
 
 example : nth_error [4, 5, 6, 7] 0 = some 4 := rfl
 
@@ -1165,7 +1169,7 @@ yeah, we've been using ite already...
 -/
 def nth_error' : natlist → ℕ → natoption
 | nil := λ _, none
-| (h::t) := λ n, if n =? 0 then some h
+| (h :: t) := λ n, if n =? 0 then some h
                  else nth_error' t (pred n)
 
 /-
@@ -1196,7 +1200,7 @@ Example test_hd_error3 : hd_error [5;6] = Some 5.
 
 def head_error : natlist → natoption
 | nil := none
-| (h::_) := some h
+| (h :: _) := some h
 
 example : head_error [] = none := rfl
 

@@ -52,10 +52,10 @@ Definition token := string.
 
 Fixpoint tokenize_helper (cls : chartype) (acc xs : list ascii)
                        : list (list ascii) :=
-  let tk := match acc with [] ⇒ [] | _::_ ⇒ [rev acc] end in
+  let tk := match acc with [] ⇒ [] | _ :: _ ⇒ [rev acc] end in
   match xs with
   | [] ⇒ tk
-  | (x::xs') ⇒
+  | (x :: xs') ⇒
     match cls, classifyChar x, x with
     | _, _, "(" ⇒
       tk ++ ["("]::(tokenize_helper other [] xs')
@@ -64,11 +64,11 @@ Fixpoint tokenize_helper (cls : chartype) (acc xs : list ascii)
     | _, white, _ ⇒
       tk ++ (tokenize_helper white [] xs')
     | alpha,alpha,x ⇒
-      tokenize_helper alpha (x::acc) xs'
+      tokenize_helper alpha (x :: acc) xs'
     | digit,digit,x ⇒
-      tokenize_helper digit (x::acc) xs'
+      tokenize_helper digit (x :: acc) xs'
     | other,other,x ⇒
-      tokenize_helper other (x::acc) xs'
+      tokenize_helper other (x :: acc) xs'
     | _,tp,x ⇒
       tk ++ (tokenize_helper tp [x] xs')
     end
@@ -127,7 +127,7 @@ def token := string
 --   let tk := match acc with [] := [] | _ := [acc.reverse] end in
 --   match xs with
 --   | [] := tk
---   | x::xs' :=
+--   | x :: xs' :=
 --     match cls, classifyChar x, x with
 --       | _, _, '(' := tk ++ ['(']::tokenize_helper other [] xs'
 --       | _, _, _ := tk
@@ -143,9 +143,9 @@ def token := string
 --         | _, _, '(' := tk ++ ['(']::ih other []
 --         | _, _, ')' := tk ++ [')']::ih other []
 --         | _, white, _ := tk ++ ih white []
---         | alpha, alpha, x := ih alpha (x::acc)
---         | digit, digit, x := ih digit (x::acc)
---         | other, other, x := ih other (x::acc)
+--         | alpha, alpha, x := ih alpha (x :: acc)
+--         | digit, digit, x := ih digit (x :: acc)
+--         | other, other, x := ih other (x :: acc)
 --         | _, tp, x := tk ++ ih tp [x]
 --       end
 --   ) cls acc
@@ -157,7 +157,7 @@ def token := string
 --   let tk := if acc ≠ [] then [] else [acc.reverse] in
 --   xs.brec_on $ λxs b,
 --     match xs with
---     | x::xs := tk
+--     | x :: xs := tk
 --     | _ := tk
 --     end
 
@@ -169,15 +169,15 @@ def rev_ll (ls : list char) := if ls = [] then [] else [ls.reverse]
 
 def tokenize_helper : chartype → list char → list char → list (list char)
 | cls acc [] := rev_ll acc
-| cls acc (x::xs') :=
+| cls acc (x :: xs') :=
   let tk := rev_ll acc in
   match cls, classifyChar x, x with
   | _, _, '(' := tk ++ ['(']::tokenize_helper other [] xs'
   | _, _, ')' := tk ++ [')']::tokenize_helper other [] xs'
   | _, white, _ := tk ++ tokenize_helper white [] xs'
-  | alpha, alpha, x := tokenize_helper alpha (x::acc) xs'
-  | digit, digit, x := tokenize_helper digit (x::acc) xs'
-  | other, other, x := tokenize_helper other (x::acc) xs'
+  | alpha, alpha, x := tokenize_helper alpha (x :: acc) xs'
+  | digit, digit, x := tokenize_helper digit (x :: acc) xs'
+  | other, other, x := tokenize_helper other (x :: acc) xs'
   | _, tp, x := tk ++ tokenize_helper tp [x] xs'
   end
 
@@ -320,7 +320,7 @@ def many {α} (p steps) : parser (list α) := many_helper p [] steps
 Definition firstExpect {T} (t : token) (p : parser T)
                      : parser T :=
   fun xs ⇒ match xs with
-            | x::xs' ⇒
+            | x :: xs' ⇒
               if string_dec x t
               then p xs'
               else NoneE ("expected '" ++ t ++ "'.")
@@ -330,7 +330,7 @@ Definition firstExpect {T} (t : token) (p : parser T)
 -/
 
 def firstExpect {α} (t : token) (p : parser α) : parser α
-| (x::xs') := if x = t then p xs' else NoneE $ "expected '" ++ t ++ "'."
+| (x :: xs') := if x = t then p xs' else NoneE $ "expected '" ++ t ++ "'."
 | [] := NoneE $ "expected '" ++ t ++ "'."
 
 /-
@@ -346,7 +346,7 @@ Definition parseIdentifier (xs : list token)
                          : optionE (string * list token) :=
 match xs with
 | [] ⇒ NoneE "Expected identifier"
-| x::xs' ⇒
+| x :: xs' ⇒
     if forallb isLowerAlpha (list_of_string x) then
       SomeE (x, xs')
     else
@@ -356,7 +356,7 @@ end.
 
 def parseIdentifier : parser string
 | [] := NoneE "Expected identifier"
-| (x::xs') :=
+| (x :: xs') :=
   if x.data.all isLowerAlpha
   then SomeE (x, xs')
   else NoneE ("Illegal identifier:'" ++ x ++ "'")
@@ -366,7 +366,7 @@ Definition parseNumber (xs : list token)
                      : optionE (nat * list token) :=
 match xs with
 | [] ⇒ NoneE "Expected number"
-| x::xs' ⇒
+| x :: xs' ⇒
     if forallb isDigit (list_of_string x) then
       SomeE (fold_left
                (fun n d ⇒
@@ -382,7 +382,7 @@ end.
 
 def parseNumber : parser ℕ
 | [] := NoneE "Expected number"
-| (x::xs') :=
+| (x :: xs') :=
   if x.data.all isDigit
   then SomeE (x.data.foldl (λn d, 10 * n + d.val - '0'.val) 0, xs')
   else NoneE "Expected number"
@@ -706,7 +706,7 @@ Definition parse (str : string) : optionE com :=
   let tokens := tokenize str in
   match parseSequencedCommand bignumber tokens with
   | SomeE (c, []) ⇒ SomeE c
-  | SomeE (_, t::_) ⇒ NoneE ("Trailing tokens remaining: " ++ t)
+  | SomeE (_, t :: _) ⇒ NoneE ("Trailing tokens remaining: " ++ t)
   | NoneE err ⇒ NoneE err
   end.
 -/
@@ -751,7 +751,7 @@ def bignumber := 1000
 def parse (str) : optionE com :=
 match parseSequencedCommand bignumber $ tokenize str with
 | SomeE (c, []) := SomeE c
-| SomeE (_, t::_) := NoneE $ "Trailing tokens remaining: " ++ t
+| SomeE (_, t :: _) := NoneE $ "Trailing tokens remaining: " ++ t
 | NoneE err := NoneE err
 end
 

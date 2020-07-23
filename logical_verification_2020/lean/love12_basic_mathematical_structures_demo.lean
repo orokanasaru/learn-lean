@@ -148,10 +148,10 @@ def ℤ₂.mul : ℤ₂ → ℤ₂ → ℤ₂
   inv            := λa, a,
   add_comm       := by intros a b; cases a; cases b; refl,
   zero_ne_one    := by finish,
+  inv_zero       := rfl,
   one_mul        := by intros a; cases a; refl,
   mul_one        := by intros a; cases a; refl,
   mul_inv_cancel := by intros a h; cases a; finish,
-  inv_mul_cancel := by intros a h; cases a; finish,
   mul_assoc      :=
     by intros a b c; cases a; cases b; cases c; refl,
   mul_comm       := by intros a b; cases a; cases b; refl,

@@ -47,7 +47,7 @@ def rev (xs : list α) : list α :=
 
 local attribute [simp]
 theorem len_cons (x : α) (xs : list α) :
-  len (x::xs) = 1 + len xs := by simp
+  len (x :: xs) = 1 + len xs := by simp
 
 local attribute [simp]
 theorem len_app (s : list α) (t : list α) :

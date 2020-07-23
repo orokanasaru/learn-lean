@@ -52,7 +52,7 @@ def list.add {α : Type u} [has_add α] :
   list α → list α → list α
 | a [] := a
 | [] b := b
-| (a::as) (b::bs) := (a + b)::(list.add as bs)
+| (a :: as) (b :: bs) := (a + b)::(list.add as bs)
 
 
 instance {α : Type u} [has_add α] : has_add (list α) :=
@@ -84,7 +84,7 @@ instance bool_to_Prop : has_coe bool Prop :=
 
 def list.to_set {α : Type u} : list α → set α
 | []     := ∅
-| (h::t) := {h} ∪ list.to_set t
+| (h :: t) := {h} ∪ list.to_set t
 
 instance list_to_set_coe (α : Type u) :
   has_coe (list α) (set α) :=

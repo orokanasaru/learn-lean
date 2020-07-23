@@ -139,7 +139,7 @@ Example example_empty := (_ !-> false).
 -/
 
 /- single _ doesn't work -/
-notation `__` ` !→ `:10 v := t_empty v
+local notation `__` ` !→ `:10 v := t_empty v
 
 example := __ !→ ff
 
@@ -149,7 +149,7 @@ Notation "x '!->' v ';' m" := (t_update m x v)
 -/
 
 /- here's how to assign precedence to parts of notation -/
-notation x ` !→ `:10 v:5 ` ; ` m := t_update m x v
+local notation x ` !→ `:10 v:5 ` ; ` m := t_update m x v
 
 /-
 Definition examplemap' :=
@@ -302,7 +302,7 @@ Notation "x '⊢>' v ';' m" := (update m x v)
   (at level 100, v at next level, right associativity).
 -/
 
-notation x ` |→ `:10 v:5 ` ; ` m := update m x v
+local notation x ` |→ `:10 v:5 ` ; ` m := update m x v
 
 /-
 Notation "x '⊢>' v" := (update empty x v)
@@ -312,7 +312,7 @@ Example examplepmap :=
   ("Church" ⊢> true ; "Turing" ⊢> false).
 -/
 
-notation x ` |→ `:10 v := update empty x v
+local notation x ` |→ `:10 v := update empty x v
 
 /-
 Lemma apply_empty : ∀(A : Type) (x : string),

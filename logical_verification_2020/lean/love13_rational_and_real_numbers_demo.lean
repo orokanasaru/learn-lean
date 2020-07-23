@@ -493,7 +493,6 @@ namespace real
 
 end real
 
-
 /-! ### Alternative Definitions of `ℝ`
 
 * Dedekind cuts: `r : ℝ` is represented essentially as `{x : ℚ | x < r}`.
