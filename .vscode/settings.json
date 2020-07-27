@@ -1,38 +1,35 @@
 {
+  "files.exclude": {
+    "lean_together": true,
+    "lean-web-editor": true,
+    "logical_verification_2020": true,
+    "pil": true,
+    "sf": true,
+    "tpil": true,
+    "tutorials": true,
+    "node_modules": true
+  },
   "workbench.colorCustomizations": {
-    "activityBar.activeBackground": "#5bf9cd",
-    "activityBar.activeBorder": "#d065f9",
-    "activityBar.background": "#5bf9cd",
+    "activityBar.activeBackground": "#89e79d",
+    "activityBar.activeBorder": "#917be4",
+    "activityBar.background": "#89e79d",
     "activityBar.foreground": "#15202b",
     "activityBar.inactiveForeground": "#15202b99",
-    "activityBarBadge.background": "#d065f9",
+    "activityBarBadge.background": "#917be4",
     "activityBarBadge.foreground": "#15202b",
-    "editorGroup.border": "#5bf9cd",
-    "panel.border": "#5bf9cd",
-    "sideBar.border": "#5bf9cd",
-    "statusBar.background": "#2af7be",
-    "statusBar.border": "#2af7be",
+    "editorGroup.border": "#89e79d",
+    "panel.border": "#89e79d",
+    "sideBar.border": "#89e79d",
+    "statusBar.background": "#5fdf79",
+    "statusBar.border": "#5fdf79",
     "statusBar.foreground": "#15202b",
-    "statusBarItem.hoverBackground": "#09e5a8",
-    "tab.activeBorder": "#5bf9cd",
-    "titleBar.activeBackground": "#2af7be",
+    "statusBarItem.hoverBackground": "#34d655",
+    "tab.activeBorder": "#89e79d",
+    "titleBar.activeBackground": "#5fdf79",
     "titleBar.activeForeground": "#15202b",
-    "titleBar.border": "#2af7be",
-    "titleBar.inactiveBackground": "#2af7be99",
+    "titleBar.border": "#5fdf79",
+    "titleBar.inactiveBackground": "#5fdf7999",
     "titleBar.inactiveForeground": "#15202b99"
   },
-  "peacock.color": "#2af7be",
-  "files.exclude": {
-    "**/.git": true,
-    "**/.svn": true,
-    "**/.hg": true,
-    "**/CVS": true,
-    "**/.DS_Store": true,
-    "**/.history": true
-  },
-  "search.exclude": {
-    "**/node_modules": true,
-    "**/bower_components": true,
-    "**/*.code-search": true
-  }
+  "peacock.color": "#5fdf79"
 }
