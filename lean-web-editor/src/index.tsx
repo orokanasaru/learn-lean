@@ -12,16 +12,13 @@ import {
   checkInputCompletionChange,
   checkInputCompletionPosition,
   currentlyRunning,
-  delayMs,
   registerLeanLanguage,
   server,
   tabHandler,
 } from './langservice';
 
-function leanColorize(text: string): string {
-  // TODO(gabriel): use promises
-  const colorized: string = (monaco.editor.colorize(text, 'lean', {}) as any)
-    ._value;
+async function leanColorize(text: string): Promise<string> {
+  const colorized = await monaco.editor.colorize(text, 'lean', {});
   return colorized.replace(/&nbsp;/g, ' ');
 }
 
@@ -29,11 +26,18 @@ interface MessageWidgetProps {
   msg: Message;
 }
 function MessageWidget({ msg }: MessageWidgetProps) {
+  const [text, setText] = React.useState(msg.text);
+
+  React.useEffect(() => {
+    leanColorize(text).then(setText);
+  }, [msg.text]);
+
   const colorOfSeverity = {
     information: 'green',
     warning: 'orange',
     error: 'red',
   };
+
   // TODO: links and decorations on hover
   return (
     <div style={{ paddingBottom: '1em' }}>
@@ -43,10 +47,7 @@ function MessageWidget({ msg }: MessageWidgetProps) {
       >
         {msg.pos_line}:{msg.pos_col}: {msg.severity}: {msg.caption}
       </div>
-      <div
-        className='code-block'
-        dangerouslySetInnerHTML={{ __html: leanColorize(msg.text) }}
-      />
+      <div className='code-block' dangerouslySetInnerHTML={{ __html: text }} />
     </div>
   );
 }
@@ -61,6 +62,17 @@ interface GoalWidgetProps {
   position: Position;
 }
 function GoalWidget({ goal, position }: GoalWidgetProps) {
+  const [goalType, setGoalType] = React.useState(goal.type);
+  const [goalState, setGoalState] = React.useState(goal.state);
+
+  React.useEffect(() => {
+    leanColorize(goalType).then(setGoalType);
+  }, [goal.type]);
+
+  React.useEffect(() => {
+    leanColorize(goalState).then(setGoalState);
+  }, [goal.state]);
+
   const tacticHeader = goal.text && (
     <div className='info-header doc-header'>
       {position.line}:{position.column}: tactic{' '}
@@ -98,7 +110,7 @@ function GoalWidget({ goal, position }: GoalWidgetProps) {
       <div
         className='code-block'
         dangerouslySetInnerHTML={{
-          __html: leanColorize(goal.type) + (!goal.doc && '<br />'),
+          __html: goalType + !goal.doc && '<br />',
         }}
       />
     );
@@ -111,7 +123,7 @@ function GoalWidget({ goal, position }: GoalWidgetProps) {
   const goalStateBody = goal.state && (
     <div
       className='code-block'
-      dangerouslySetInnerHTML={{ __html: leanColorize(goal.state) + '<br/>' }}
+      dangerouslySetInnerHTML={{ __html: goalState + '<br />' }}
     />
   );
 
@@ -169,125 +181,104 @@ interface InfoViewProps {
   file: string;
   cursor?: Position;
 }
-interface InfoViewState {
-  goal?: GoalWidgetProps;
-  messages: Message[];
-  displayMode: DisplayMode;
-}
-class InfoView extends React.Component<InfoViewProps, InfoViewState> {
-  private subscriptions: monaco.IDisposable[] = [];
 
-  constructor(props: InfoViewProps) {
-    super(props);
-    this.state = {
-      messages: [],
-      displayMode: DisplayMode.OnlyState,
-    };
-  }
-  componentWillMount() {
-    this.updateMessages(this.props);
+function InfoView(props: InfoViewProps) {
+  const [goal, setGoal] = React.useState<GoalWidgetProps>();
+  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [displayMode, setDisplayMode] = React.useState(DisplayMode.OnlyState);
+
+  React.useEffect(() => {
+    updateMessages();
     let timer = null; // debounce
-    this.subscriptions.push(
-      server.allMessages.on((allMsgs) => {
-        if (timer) {
-          clearTimeout(timer);
-        }
-        timer = setTimeout(() => {
-          this.updateMessages(this.props);
-          this.refreshGoal(this.props);
-        }, 100);
-      }),
-    );
-  }
-  componentWillUnmount() {
-    for (const s of this.subscriptions) {
-      s.dispose();
-    }
-    this.subscriptions = [];
-  }
-  componentWillReceiveProps(nextProps) {
-    if (nextProps.cursor === this.props.cursor) {
-      return;
-    }
-    this.updateMessages(nextProps);
-    this.refreshGoal(nextProps);
-  }
-
-  updateMessages(nextProps) {
-    this.setState({
-      messages: allMessages.filter((v) => v.file_name === this.props.file),
+    const subscription = server.allMessages.on(() => {
+      if (timer) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        updateMessages();
+        refreshGoal();
+      }, 100);
     });
+
+    return subscription.dispose;
+  }, []);
+
+  React.useEffect(() => {
+    updateMessages();
+    refreshGoal();
+  }, [props.cursor]);
+
+  function updateMessages() {
+    setMessages(allMessages.filter((v) => v.file_name === props.file));
   }
 
-  refreshGoal(nextProps?: InfoViewProps) {
-    if (!nextProps) {
-      nextProps = this.props;
-    }
-    if (!nextProps.cursor) {
+  function refreshGoal() {
+    if (!props.cursor) {
       return;
     }
 
-    const position = nextProps.cursor;
-    server.info(nextProps.file, position.line, position.column).then((res) => {
-      this.setState({ goal: res.record && { goal: res.record, position } });
+    const position = props.cursor;
+    server.info(props.file, position.line, position.column).then((res) => {
+      setGoal(res.record && { goal: res.record, position });
     });
   }
 
-  render() {
-    const goal = this.state.displayMode === DisplayMode.OnlyState &&
-      this.state.goal && <div key={'goal'}>{GoalWidget(this.state.goal)}</div>;
-    const filteredMsgs =
-      this.state.displayMode === DisplayMode.AllMessage
-        ? this.state.messages
-        : this.state.messages.filter(
-            ({ pos_col, pos_line, end_pos_col, end_pos_line }) => {
-              if (!this.props.cursor) {
-                return false;
-              }
-              const { line, column } = this.props.cursor;
-              return (
-                pos_line <= line &&
-                ((!end_pos_line && line === pos_line) ||
-                  line <= end_pos_line) &&
-                (line !== pos_line || pos_col <= column) &&
-                (line !== end_pos_line || end_pos_col >= column)
-              );
-            },
+  const displayGoal = displayMode === DisplayMode.OnlyState && goal && (
+    <div key={'goal'}>
+      <GoalWidget goal={goal.goal} position={goal.position} />
+    </div>
+  );
+
+  const filteredMsgs =
+    displayMode === DisplayMode.AllMessage
+      ? messages
+      : messages.filter(({ pos_col, pos_line, end_pos_col, end_pos_line }) => {
+          if (!props.cursor) {
+            return false;
+          }
+          const { line, column } = props.cursor;
+          return (
+            pos_line <= line &&
+            ((!end_pos_line && line === pos_line) || line <= end_pos_line) &&
+            (line !== pos_line || pos_col <= column) &&
+            (line !== end_pos_line || end_pos_col >= column)
           );
-    const msgs = filteredMsgs.map((msg, i) => (
-      <div key={i}>{MessageWidget({ msg })}</div>
-    ));
-    return (
-      <div style={{ overflow: 'auto', height: '100%' }}>
-        <div className='infoview-buttons'>
-          <img
-            src='./display-goal-light.svg'
-            title='Display Goal'
-            style={{
-              opacity:
-                this.state.displayMode === DisplayMode.OnlyState ? 1 : 0.25,
-            }}
-            onClick={() => {
-              this.setState({ displayMode: DisplayMode.OnlyState });
-            }}
-          />
-          <img
-            src='./display-list-light.svg'
-            title='Display Messages'
-            style={{
-              opacity:
-                this.state.displayMode === DisplayMode.AllMessage ? 1 : 0.25,
-            }}
-            onClick={() => {
-              this.setState({ displayMode: DisplayMode.AllMessage });
-            }}
-          />
-        </div>
-        {goal}
-        {msgs}
+        });
+
+  const msgs = filteredMsgs.map((msg, i) => (
+    <div key={i}>
+      <MessageWidget msg={msg} />
+    </div>
+  ));
+
+  return (
+    <div style={{ overflow: 'auto', height: '100%' }}>
+      <div className='infoview-buttons'>
+        <img
+          src='./display-goal-light.svg'
+          title='Display Goal'
+          style={{
+            opacity: displayMode === DisplayMode.OnlyState ? 1 : 0.25,
+          }}
+          onClick={() => {
+            setDisplayMode(DisplayMode.OnlyState);
+          }}
+        />
+        <img
+          src='./display-list-light.svg'
+          title='Display Messages'
+          style={{
+            opacity: displayMode === DisplayMode.AllMessage ? 1 : 0.25,
+          }}
+          onClick={() => {
+            setDisplayMode(DisplayMode.AllMessage);
+          }}
+        />
       </div>
-    );
-  }
+      {displayGoal}
+      {msgs}
+    </div>
+  );
 }
 
 interface PageHeaderProps {
