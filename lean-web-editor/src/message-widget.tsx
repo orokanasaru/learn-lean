@@ -10,7 +10,7 @@ export function MessageWidget({ msg }: MessageWidgetProps) {
   const [text, setText] = useState(msg.text);
 
   useEffect(() => {
-    leanColorize(text).then(setText);
+    leanColorize(msg.text).then(setText);
   }, [msg.text]);
 
   const colorOfSeverity = {

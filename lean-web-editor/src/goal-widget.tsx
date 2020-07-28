@@ -13,11 +13,11 @@ export function GoalWidget({ goal, position }: GoalWidgetProps) {
   const [goalState, setGoalState] = useState(goal.state);
 
   useEffect(() => {
-    leanColorize(goalType).then(setGoalType);
+    leanColorize(goal.type).then(setGoalType);
   }, [goal.type]);
 
   useEffect(() => {
-    leanColorize(goalState).then(setGoalState);
+    leanColorize(goal.state).then(setGoalState);
   }, [goal.state]);
 
   const tacticHeader = goal.text && (
