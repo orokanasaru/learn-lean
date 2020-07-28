@@ -7,7 +7,7 @@ export function App() {
   const initUrl: URL = new URL(window.location.href);
   const params: HashParams = parseHash(initUrl.hash);
 
-  function changeUrl(newValue, key) {
+  function changeUrl(newValue: string, key: string) {
     params[key] = newValue;
     // if we just loaded a url, wipe out the code param
     if (key === 'url' || !newValue) {

@@ -4,7 +4,7 @@
       "path": "."
     },
     {
-      "path": "lean_together"
+      "path": "lean-together"
     },
     {
       "path": "lean-web-editor"
@@ -26,6 +26,15 @@
     }
   ],
   "settings": {
+    "jest.disabledWorkspaceFolders": [
+      "lean",
+      "lean-web-editor",
+      "logical_verification_2020",
+      "pil",
+      "sf",
+      "tpil",
+      "tutorials"
+    ],
     "workbench.colorCustomizations": {
       "activityBar.activeBackground": "#5bf9cd",
       "activityBar.activeBorder": "#d065f9",

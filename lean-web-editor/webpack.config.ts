@@ -23,12 +23,12 @@ const distDir = path.resolve(__dirname, 'dist');
 
 module.exports = {
   entry: {
-    jsx: './src/index.tsx',
+    jsx: './src/main.tsx',
     // html: './public/index.html',
     // vendor: ['react', 'react-dom']
   },
   output: {
-    filename: 'index.js',
+    filename: 'lean-web-editor.js',
     path: distDir,
     publicPath: './',
   },

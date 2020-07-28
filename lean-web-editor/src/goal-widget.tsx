@@ -1,6 +1,7 @@
 import { InfoRecord } from '@bryangingechen/lean-client-js-browser';
 import React, { useEffect, useState } from 'react';
-import { leanColorize, Position } from '.';
+import { leanColorize } from './colorize';
+import { Position } from './position';
 import { ToggleDoc } from './toggle-doc';
 
 export interface GoalWidgetProps {

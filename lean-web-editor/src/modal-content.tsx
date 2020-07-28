@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { info, leanJsOpts } from '.';
 import { server } from './langservice';
+import { info, leanJsOpts } from './options';
 
 export function ModalContent({ onClose, modalRef, onKeyDown, clickAway }) {
   const libinfo = []; // populated with info about included libraries

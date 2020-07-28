@@ -2,7 +2,6 @@ import { editor, KeyCode, Uri } from 'monaco-editor';
 import React from 'react';
 import { findDOMNode } from 'react-dom';
 import SplitPane from 'react-split-pane';
-import { Position } from '.';
 import { InfoView } from './info-view';
 import {
   checkInputCompletionChange,
@@ -10,6 +9,7 @@ import {
   tabHandler,
 } from './langservice';
 import { PageHeader } from './page-header';
+import { Position } from './position';
 
 interface LeanEditorProps {
   file: string;

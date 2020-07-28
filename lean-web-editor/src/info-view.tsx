@@ -1,9 +1,9 @@
-import { InfoRecord, Message } from '@bryangingechen/lean-client-js-browser';
+import { Message } from '@bryangingechen/lean-client-js-browser';
 import React, { useEffect, useState } from 'react';
-import { Position } from '.';
 import { GoalWidget, GoalWidgetProps } from './goal-widget';
 import { allMessages, server } from './langservice';
 import { MessageWidget } from './message-widget';
+import { Position } from './position';
 
 enum DisplayMode {
   OnlyState, // only the state at the current cursor position including the tactic state
@@ -16,11 +16,11 @@ interface InfoViewProps {
 }
 
 export function InfoView(props: InfoViewProps) {
-  const [goal, setGoal] = React.useState<GoalWidgetProps>();
-  const [messages, setMessages] = React.useState<Message[]>([]);
-  const [displayMode, setDisplayMode] = React.useState(DisplayMode.OnlyState);
+  const [goal, setGoal] = useState<GoalWidgetProps>();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [displayMode, setDisplayMode] = useState(DisplayMode.OnlyState);
 
-  React.useEffect(() => {
+  useEffect(() => {
     updateMessages();
     let timer = null; // debounce
     const subscription = server.allMessages.on(() => {
@@ -36,7 +36,7 @@ export function InfoView(props: InfoViewProps) {
     return subscription.dispose;
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     updateMessages();
     refreshGoal();
   }, [props.cursor]);

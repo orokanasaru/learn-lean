@@ -1,17 +1,19 @@
 import {
   PrimedComponent,
   PrimedComponentFactory,
-} from "@fluidframework/aqueduct";
-import { IValueChanged } from "@fluidframework/map";
-import { IComponentHTMLView } from "@fluidframework/view-interfaces";
+} from '@fluidframework/aqueduct';
+import { IValueChanged } from '@fluidframework/map';
+import { IComponentHTMLView } from '@fluidframework/view-interfaces';
+import { App, leanJsOpts, registerLeanLanguage } from 'lean-web-editor';
 
-import * as React from "react";
-import * as ReactDOM from "react-dom";
+import React from 'react';
+import ReactDOM from 'react-dom';
 
-import { ILeanTogether } from "./interface";
-import { DiceRollerView } from "./view";
+import { ILeanTogether } from './interface';
 
-const diceValueKey = "diceValue";
+const diceValueKey = 'diceValue';
+
+registerLeanLanguage(leanJsOpts);
 
 /**
  * Fluid component
@@ -19,7 +21,7 @@ const diceValueKey = "diceValue";
 export class LeanTogether extends PrimedComponent
   implements ILeanTogether, IComponentHTMLView {
   public static get ComponentName() {
-    return "leantogether";
+    return 'leantogether';
   }
 
   public get IComponentHTMLView() {
@@ -34,7 +36,7 @@ export class LeanTogether extends PrimedComponent
     LeanTogether.ComponentName,
     LeanTogether,
     [],
-    {}
+    {},
   );
 
   /**
@@ -51,9 +53,9 @@ export class LeanTogether extends PrimedComponent
    * componentHasInitialized runs every time the component is initialized including the first time.
    */
   protected async componentHasInitialized() {
-    this.root.on("valueChanged", (changed: IValueChanged) => {
+    this.root.on('valueChanged', (changed: IValueChanged) => {
       if (changed.key === diceValueKey) {
-        this.emit("diceRolled");
+        this.emit('diceRolled');
       }
     });
   }
@@ -62,7 +64,7 @@ export class LeanTogether extends PrimedComponent
    * Render the dice.
    */
   public render(div: HTMLElement) {
-    ReactDOM.render(<DiceRollerView model={this} />, div);
+    ReactDOM.render(<App />, div);
   }
 
   public get value() {

@@ -1,19 +1,4 @@
 import { LeanJsOpts } from '@bryangingechen/lean-client-js-browser';
-import { editor } from 'monaco-editor';
-import React from 'react';
-import { render } from 'react-dom';
-import { App } from './app';
-import { registerLeanLanguage } from './langservice';
-
-export async function leanColorize(text: string): Promise<string> {
-  const colorized = await editor.colorize(text, 'lean', {});
-  return colorized.replace(/&nbsp;/g, ' ');
-}
-
-export interface Position {
-  line: number;
-  column: number;
-}
 
 // const hostPrefix = process.env.COMMUNITY ? 'https://cdn.jsdelivr.net/gh/bryangingechen/lean-web-editor-dist/' : './';
 // const hostPrefix = process.env.COMMUNITY ? 'https://tqft.net/lean/web-editor/' : './';
@@ -37,9 +22,3 @@ export let info = null;
 fetch(leanJsOpts.libraryMeta)
   .then((res) => res.json())
   .then((j) => (info = j));
-
-// tslint:disable-next-line:no-var-requires
-(window as any).require(['vs/editor/editor.main'], () => {
-  registerLeanLanguage(leanJsOpts);
-  render(<App />, document.getElementById('root'));
-});

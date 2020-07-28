@@ -4,13 +4,13 @@
  */
 
 module.exports = {
-  preset: "jest-puppeteer",
+  preset: 'jest-puppeteer',
   globals: {
-    PATH: "http://localhost:8080"
+    PATH: 'http://localhost:8082',
   },
-  testMatch: ["**/?(*.)+(spec|test).[t]s"],
+  testMatch: ['**/?(*.)+(spec|test).[t]s'],
   testPathIgnorePatterns: ['/node_modules/', 'dist'],
   transform: {
-		"^.+\\.ts?$": "ts-jest"
-	},
+    '^.+\\.ts?$': 'ts-jest',
+  },
 };
