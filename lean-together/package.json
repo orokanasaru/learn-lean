@@ -8,6 +8,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "npm run webpack && npm run tsc",
+    "patch": "cp ./patches/routes.js ./node_modules/@fluidframework/webpack-component-loader/dist/routes.js",
     "start": "npm run start:local -- --open",
     "start:local": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} webpack-dev-server --package package.json --env.mode local",
     "start:tiny": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} webpack-dev-server --package package.json --env.mode tinylicious",
@@ -21,7 +22,8 @@
     "@fluidframework/view-interfaces": "^0.20.0",
     "lean-web-editor": "workspace:^1.0.0",
     "react": "^16.13.1",
-    "react-dom": "^16.13.1"
+    "react-dom": "^16.13.1",
+    "react-helmet": "^6.1.0"
   },
   "devDependencies": {
     "@fluidframework/webpack-component-loader": "^0.20.0",
@@ -31,11 +33,16 @@
     "@types/node": "^14.0.26",
     "@types/puppeteer": "3.0.1",
     "@types/react-dom": "^16.9.8",
+    "@types/react-helmet": "^6.0.0",
     "cross-env": "^7.0.2",
+    "css-loader": "^4.0.0",
+    "file-loader": "^6.0.0",
     "jest": "^26.1.0",
     "jest-junit": "^11.1.0",
     "jest-puppeteer": "^4.4.0",
+    "monaco-editor-webpack-plugin": "^1.9.0",
     "puppeteer": "^5.2.1",
+    "style-loader": "^1.2.1",
     "ts-jest": "26.1.4",
     "ts-loader": "^8.0.1",
     "ts-node": "^8.10.2",
@@ -43,7 +50,8 @@
     "webpack": "^4.44.0",
     "webpack-cli": "3.3.12",
     "webpack-dev-server": "^3.11.0",
-    "webpack-merge": "5.0.9"
+    "webpack-merge": "5.0.9",
+    "worker-loader": "^2.0.0"
   },
   "fluid": {
     "browser": {

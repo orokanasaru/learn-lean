@@ -3,7 +3,7 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MonacoWebpackPlugin from 'monaco-editor-webpack-plugin';
 import path from 'path';
 import TerserPlugin from 'terser-webpack-plugin-legacy';
-import webpack from 'webpack';
+import { Configuration, EnvironmentPlugin } from 'webpack';
 
 const MonacoEditorSrc = path.join(
   __dirname,
@@ -70,7 +70,7 @@ module.exports = {
   },
   plugins: [
     // used to change hostPrefix in index.tsx to 'https://tqft.net/lean/web-editor/'
-    new webpack.EnvironmentPlugin({
+    new EnvironmentPlugin({
       COMMUNITY: false,
     }),
     new HtmlWebpackPlugin({
@@ -92,8 +92,10 @@ module.exports = {
     child_process: 'empty',
     readline: 'empty',
   },
+  devtool: 'source-map',
+  mode: 'development',
   externals: {
     // react: 'require("react")',
     // 'react-dom': 'require("react-dom")',
   },
-};
+} as Configuration;

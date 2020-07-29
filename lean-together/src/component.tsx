@@ -4,7 +4,7 @@ import {
 } from '@fluidframework/aqueduct';
 import { IValueChanged } from '@fluidframework/map';
 import { IComponentHTMLView } from '@fluidframework/view-interfaces';
-import { App, leanJsOpts, registerLeanLanguage } from 'lean-web-editor';
+import { App } from 'lean-web-editor';
 
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -12,8 +12,6 @@ import ReactDOM from 'react-dom';
 import { ILeanTogether } from './interface';
 
 const diceValueKey = 'diceValue';
-
-registerLeanLanguage(leanJsOpts);
 
 /**
  * Fluid component

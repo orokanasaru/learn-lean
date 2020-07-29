@@ -1,7 +1,7 @@
 import * as lean from '@bryangingechen/lean-client-js-browser';
 import * as monaco from 'monaco-editor';
 import { leanSyntax } from './syntax';
-import * as translations from './translations.json';
+import translations from './translations.json';
 
 export class CoalescedTimer {
   private timer: number = undefined;
