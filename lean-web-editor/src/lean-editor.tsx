@@ -14,7 +14,10 @@ import { Position } from './position';
 interface LeanEditorProps {
   file: string;
   initialValue: string;
-  onValueChange?: (value: string) => void;
+  onValueChange?: (
+    edits: editor.IModelContentChangedEvent,
+    value: string,
+  ) => void;
   initialUrl: string;
   onUrlChange?: (value: string) => void;
   clearUrlParam: () => void;
@@ -61,7 +64,7 @@ export class LeanEditor extends React.Component<
       return (
         (!e.isFlush || !val) &&
         this.props.onValueChange &&
-        this.props.onValueChange(val)
+        this.props.onValueChange(e, val)
       );
     });
 

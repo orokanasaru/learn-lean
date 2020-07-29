@@ -1,9 +1,29 @@
-import { Uri } from 'monaco-editor';
+import { editor, Uri } from 'monaco-editor';
 import React from 'react';
 import { HashParams, paramsToString, parseHash } from './hash-params';
 import { LeanEditor } from './lean-editor';
 
-export function App() {
+export const defaultValue = `-- Live ${
+  (self as any).WebAssembly ? 'WebAssembly' : 'JavaScript'
+} version of Lean
+#eval let v := lean.version in let s := lean.special_version_desc in string.join
+["Lean (version ", v.1.repr, ".", v.2.1.repr, ".", v.2.2.repr, ", ",
+if s ≠ "" then s ++ ", " else s, "commit ", (lean.githash.to_list.take 12).as_string, ")"]
+
+example (m n : ℕ) : m + n = n + m :=
+by simp [nat.add_comm]`;
+
+export interface AppProps {
+  showFilePicker?: boolean;
+  editUrlHash?: boolean;
+  initialValue?: string;
+  onValueChange?: (
+    edits: editor.IModelContentChangedEvent,
+    value: string,
+  ) => void;
+}
+
+export function App(appProps: AppProps = {}) {
   const initUrl: URL = new URL(window.location.href);
   const params: HashParams = parseHash(initUrl.hash);
 
@@ -47,10 +67,21 @@ export function App() {
   return (
     <LeanEditor
       file={fn}
-      initialValue={params.code}
-      onValueChange={(newValue) => changeUrl(newValue, 'code')}
+      initialValue={params.code || appProps.initialValue || defaultValue}
+      onValueChange={(changes, newValue) => {
+        console.log(changes);
+        if (appProps.editUrlHash ?? true) {
+          changeUrl(newValue, 'code');
+        }
+
+        if (appProps.onValueChange) {
+          appProps.onValueChange(changes, newValue);
+        }
+      }}
       initialUrl={params.url}
-      onUrlChange={(newValue) => changeUrl(newValue, 'url')}
+      onUrlChange={(newValue) =>
+        (appProps.editUrlHash ?? true) && changeUrl(newValue, 'url')
+      }
       clearUrlParam={clearUrlParam}
     />
   );

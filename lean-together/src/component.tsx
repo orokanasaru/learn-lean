@@ -2,16 +2,15 @@ import {
   PrimedComponent,
   PrimedComponentFactory,
 } from '@fluidframework/aqueduct';
-import { IValueChanged } from '@fluidframework/map';
 import { IComponentHTMLView } from '@fluidframework/view-interfaces';
-import { App } from 'lean-web-editor';
+import { App, editor } from 'lean-web-editor';
 
 import React from 'react';
 import ReactDOM from 'react-dom';
 
 import { ILeanTogether } from './interface';
 
-const diceValueKey = 'diceValue';
+const editKey = 'edit';
 
 /**
  * Fluid component
@@ -44,15 +43,21 @@ export class LeanTogether extends PrimedComponent
    * This method is used to perform component setup, which can include setting an initial schema or initial values.
    */
   protected async componentInitializingFirstTime() {
-    this.root.set(diceValueKey, 1);
+    this.root.set(editKey, '');
   }
 
   /**
    * componentHasInitialized runs every time the component is initialized including the first time.
    */
   protected async componentHasInitialized() {
-    this.root.on('valueChanged', (changed: IValueChanged) => {
-      if (changed.key === diceValueKey) {
+    this.root.on('valueChanged', (changed, local, op, target) => {
+      if (local) {
+        return;
+      }
+
+      console.log(changed, local, op, target);
+
+      if (changed.key === editKey) {
         this.emit('diceRolled');
       }
     });
@@ -62,15 +67,28 @@ export class LeanTogether extends PrimedComponent
    * Render the dice.
    */
   public render(div: HTMLElement) {
-    ReactDOM.render(<App />, div);
+    ReactDOM.render(
+      <App
+        editUrlHash={false}
+        showFilePicker={false}
+        onValueChange={(edits, value) => {
+          this.root.set(editKey, JSON.stringify({ edits, value }));
+        }}
+        initialValue={this.value.value}
+      />,
+      div,
+    );
   }
 
   public get value() {
-    return this.root.get(diceValueKey);
+    return JSON.parse(this.root.get(editKey || '{}')) as {
+      edits?: editor.IModelContentChangedEvent;
+      value?: string;
+    };
   }
 
   public readonly roll = () => {
     const rollValue = Math.floor(Math.random() * 6) + 1;
-    this.root.set(diceValueKey, rollValue);
+    this.root.set(editKey, rollValue);
   };
 }
