@@ -21,6 +21,9 @@ interface LeanEditorProps {
   initialUrl: string;
   onUrlChange?: (value: string) => void;
   clearUrlParam: () => void;
+  getEditHandler?: (
+    cb: (edit: editor.IIdentifiedSingleEditOperation) => void,
+  ) => void;
 }
 
 interface LeanEditorState {
@@ -74,6 +77,12 @@ export class LeanEditor extends React.Component<
     this.onSave = this.onSave.bind(this);
     this.onLoad = this.onLoad.bind(this);
     this.onChecked = this.onChecked.bind(this);
+
+    if (this.props.getEditHandler) {
+      this.props.getEditHandler((edit) =>
+        this.editor.executeEdits('sync', [edit]),
+      );
+    }
   }
 
   componentDidMount() {

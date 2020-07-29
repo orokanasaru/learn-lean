@@ -21,6 +21,9 @@ export interface AppProps {
     edits: editor.IModelContentChangedEvent,
     value: string,
   ) => void;
+  getEditHandler?: (
+    cb: (edit: editor.IIdentifiedSingleEditOperation) => void,
+  ) => void;
 }
 
 export function App(appProps: AppProps = {}) {
@@ -83,6 +86,7 @@ export function App(appProps: AppProps = {}) {
         (appProps.editUrlHash ?? true) && changeUrl(newValue, 'url')
       }
       clearUrlParam={clearUrlParam}
+      getEditHandler={appProps.getEditHandler}
     />
   );
 }

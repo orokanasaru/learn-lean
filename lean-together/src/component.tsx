@@ -3,7 +3,7 @@ import {
   PrimedComponentFactory,
 } from '@fluidframework/aqueduct';
 import { IComponentHTMLView } from '@fluidframework/view-interfaces';
-import { App, editor } from 'lean-web-editor';
+import { App, editor, Range } from 'lean-web-editor';
 
 import React from 'react';
 import ReactDOM from 'react-dom';
@@ -17,6 +17,8 @@ const editKey = 'edit';
  */
 export class LeanTogether extends PrimedComponent
   implements ILeanTogether, IComponentHTMLView {
+  editHandler?: (edit: editor.IIdentifiedSingleEditOperation) => void;
+
   public static get ComponentName() {
     return 'leantogether';
   }
@@ -57,9 +59,22 @@ export class LeanTogether extends PrimedComponent
 
       console.log(changed, local, op, target);
 
-      if (changed.key === editKey) {
-        this.emit('diceRolled');
-      }
+      const update = JSON.parse(op.contents.value.value || '{}') as {
+        edits?: editor.IModelContentChangedEvent;
+        value?: string;
+      };
+
+      update.edits?.changes.forEach((e) =>
+        this.editHandler?.({
+          range: new Range(
+            e.range.startLineNumber,
+            e.range.startColumn,
+            e.range.endLineNumber,
+            e.range.endColumn,
+          ),
+          text: e.text,
+        }),
+      );
     });
   }
 
@@ -72,9 +87,12 @@ export class LeanTogether extends PrimedComponent
         editUrlHash={false}
         showFilePicker={false}
         onValueChange={(edits, value) => {
-          this.root.set(editKey, JSON.stringify({ edits, value }));
+          if (value !== this.value.value) {
+            this.root.set(editKey, JSON.stringify({ edits, value }));
+          }
         }}
         initialValue={this.value.value}
+        getEditHandler={(cb) => (this.editHandler = cb)}
       />,
       div,
     );
