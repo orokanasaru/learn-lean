@@ -14,6 +14,7 @@ example (m n : ℕ) : m + n = n + m :=
 by simp [nat.add_comm]`;
 
 export interface AppProps {
+  fileName?: string;
   showFilePicker?: boolean;
   editUrlHash?: boolean;
   initialValue?: string;
@@ -44,7 +45,7 @@ export function App(appProps: AppProps = {}) {
     history.replaceState(undefined, undefined, paramsToString(params));
   }
 
-  const fn = Uri.file('test.lean').fsPath;
+  const fn = Uri.file(appProps.fileName || 'test.lean').fsPath;
 
   if (window.localStorage.getItem('underline') === 'true') {
     const style = document.createElement('style');

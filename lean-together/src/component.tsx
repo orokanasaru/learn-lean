@@ -12,6 +12,8 @@ import { ILeanTogether } from './interface';
 
 const editKey = 'edit';
 
+let index = 0;
+
 /**
  * Fluid component
  */
@@ -93,13 +95,14 @@ export class LeanTogether extends PrimedComponent
         }}
         initialValue={this.value.value}
         getEditHandler={(cb) => (this.editHandler = cb)}
+        fileName={`test-${index++}.lean`}
       />,
       div,
     );
   }
 
   public get value() {
-    return JSON.parse(this.root.get(editKey || '{}')) as {
+    return JSON.parse(this.root.get(editKey) || '{}') as {
       edits?: editor.IModelContentChangedEvent;
       value?: string;
     };

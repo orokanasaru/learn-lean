@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run webpack && npm run tsc",
     "patch": "cp ./patches/routes.js ./node_modules/@fluidframework/webpack-component-loader/dist/routes.js",
-    "start": "npm run start:local -- --open",
+    "start": "npm run start:local -- --open --port 8080",
     "start:local": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} webpack-dev-server --package package.json --env.mode local",
     "start:tiny": "cross-env TS_NODE_COMPILER_OPTIONS={\\\"module\\\":\\\"commonjs\\\"} webpack-dev-server --package package.json --env.mode tinylicious",
     "test": "jest",
