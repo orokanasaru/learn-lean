@@ -224,6 +224,8 @@ exports.after = (app, server, baseDir, env, paths, styles, scripts) => {
           ? 'text/css'
           : extension === 'js'
           ? 'text/javascript'
+          : extension === 'wasm'
+          ? 'application/wasm'
           : 'text/plain';
 
       for (let p of paths) {

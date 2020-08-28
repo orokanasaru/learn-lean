@@ -88,6 +88,7 @@ export function App(appProps: AppProps = {}) {
       }
       clearUrlParam={clearUrlParam}
       getEditHandler={appProps.getEditHandler}
+      showFilePicker={appProps.showFilePicker}
     />
   );
 }

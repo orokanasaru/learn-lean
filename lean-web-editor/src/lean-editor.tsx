@@ -24,6 +24,7 @@ interface LeanEditorProps {
   getEditHandler?: (
     cb: (edit: editor.IIdentifiedSingleEditOperation) => void,
   ) => void;
+  showFilePicker?: boolean;
 }
 
 interface LeanEditorState {
@@ -235,6 +236,7 @@ export class LeanEditor extends React.Component<
             onSave={this.onSave}
             onLoad={this.onLoad}
             onChecked={this.onChecked}
+            showFilePicker={this.props.showFilePicker}
           />
         </div>
         <div className='editorContainer' ref='root'>

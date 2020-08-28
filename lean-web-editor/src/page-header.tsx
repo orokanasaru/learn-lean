@@ -13,6 +13,7 @@ interface PageHeaderProps {
   onLoad: (localFile: string, lastFileName: string) => void;
   clearUrlParam: () => void;
   onChecked: () => void;
+  showFilePicker?: boolean;
 }
 
 interface PageHeaderState {
@@ -83,7 +84,7 @@ export class PageHeader extends React.Component<
           id='collapsible'
           className='toggle'
           type='checkbox'
-          defaultChecked={true}
+          defaultChecked={false}
           onChange={this.props.onChecked}
         />
         <label
